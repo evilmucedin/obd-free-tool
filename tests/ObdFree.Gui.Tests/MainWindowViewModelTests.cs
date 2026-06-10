@@ -63,5 +63,21 @@ public class MainWindowViewModelTests
         Assert.NotNull(vm.StatusCommand);
         Assert.NotNull(vm.ReadCodesCommand);
         Assert.NotNull(vm.ClearCodesCommand);
+        Assert.NotNull(vm.ReadSrsCommand);
+        Assert.NotNull(vm.ClearSrsCommand);
+    }
+
+    [Fact]
+    public void ClearSrs_IsGatedBehindConfirmation()
+    {
+        var vm = new MainWindowViewModel();
+
+        Assert.False(vm.CanClearSrs);                 // not confirmed yet
+        Assert.False(vm.ClearSrsCommand.CanExecute(null));
+
+        vm.SrsClearConfirmed = true;
+
+        Assert.True(vm.CanClearSrs);
+        Assert.True(vm.ClearSrsCommand.CanExecute(null));
     }
 }

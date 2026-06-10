@@ -3,6 +3,7 @@ using ObdFree.Cli;
 using ObdFree.Core;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Transport;
+using ObdFree.Core.Uds;
 
 string version = Assembly.GetExecutingAssembly()
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "dev";
@@ -16,9 +17,9 @@ if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
 string command = args[0].ToLowerInvariant();
 string[] commandArgs = args[1..];
 
-// "dtc read" / "dtc clear" are two-word commands.
+// "dtc read|clear" and "srs status|read|clear" are two-word commands.
 string subcommand = string.Empty;
-if (command == "dtc" && commandArgs.Length > 0)
+if (command is "dtc" or "srs" && commandArgs.Length > 0 && !commandArgs[0].StartsWith("--", StringComparison.Ordinal))
 {
     subcommand = commandArgs[0].ToLowerInvariant();
     commandArgs = commandArgs[1..];
@@ -52,6 +53,13 @@ try
 
         case "dtc" when subcommand == "clear":
             return await RunDtcClearAsync(session);
+
+        case "srs" when subcommand is "status" or "read" or "":
+            await RunSrsReadAsync(session, options.SrsModule);
+            return 0;
+
+        case "srs" when subcommand == "clear":
+            return await RunSrsClearAsync(session, options.SrsModule);
 
         default:
             Console.Error.WriteLine($"Unknown command: '{command} {subcommand}'.");
@@ -133,6 +141,46 @@ static async Task<int> RunDtcClearAsync(ObdSession session)
     return ok ? 0 : 1;
 }
 
+static async Task RunSrsReadAsync(ObdSession session, EcuModule module)
+{
+    Console.WriteLine($"Querying {module.Name} module (tx {module.RequestHeader} / rx {module.ResponseHeader})...");
+    ModuleStatus status = await session.ReadModuleStatusAsync(module);
+
+    Console.WriteLine();
+    Console.WriteLine($"SRS / Airbag status: {status.Summary}");
+    if (status.HasFaults)
+    {
+        foreach (UdsDtc code in status.Codes)
+        {
+            Console.WriteLine($"  {code}{(code.IsActive ? "  (active)" : string.Empty)}");
+        }
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("Note: SRS addressing is make-specific and experimental. If you see no");
+    Console.WriteLine("response, override headers with --srs-tx/--srs-rx for your vehicle.");
+}
+
+static async Task<int> RunSrsClearAsync(ObdSession session, EcuModule module)
+{
+    Console.WriteLine("!! SAFETY WARNING !!");
+    Console.WriteLine("Clearing SRS/airbag codes does NOT repair the fault. Only clear codes");
+    Console.WriteLine("AFTER the underlying airbag/seat-belt issue has been physically fixed.");
+    Console.WriteLine("An improperly working SRS may not deploy in a crash.");
+    Console.WriteLine();
+    Console.Write($"Clear ALL codes from the {module.Name} module? Type 'yes' to confirm: ");
+    string? answer = Console.ReadLine();
+    if (answer?.Trim().ToLowerInvariant() is not "yes")
+    {
+        Console.WriteLine("Aborted.");
+        return 0;
+    }
+
+    bool ok = await session.ClearModuleCodesAsync(module);
+    Console.WriteLine(ok ? "SRS codes cleared." : "Clear was not acknowledged by the SRS module.");
+    return ok ? 0 : 1;
+}
+
 static void PrintUsage(string version)
 {
     Console.WriteLine($"obd-free-tool {version} — free & open-source OBD-II tool");
@@ -144,6 +192,8 @@ static void PrintUsage(string version)
     Console.WriteLine("  status        Show adapter status and a live-data snapshot");
     Console.WriteLine("  dtc read      Read stored and pending trouble codes");
     Console.WriteLine("  dtc clear     Clear trouble codes from memory (asks for confirmation)");
+    Console.WriteLine("  srs status    Show SRS/airbag status & codes (Toyota/Lexus, UDS on CAN)");
+    Console.WriteLine("  srs clear     Clear SRS/airbag codes (safety warning + confirmation)");
     Console.WriteLine();
     Console.WriteLine("CONNECTION (choose one):");
     Console.WriteLine("  --usb <port>        USB/serial adapter, e.g. /dev/ttyUSB0 or COM3");
@@ -155,8 +205,13 @@ static void PrintUsage(string version)
     Console.WriteLine("  --make <make>       Car make: generic, toyota, lexus (prompts if omitted)");
     Console.WriteLine("  --protocol <proto>  Force a protocol: auto, can, can29, iso9141, kwp");
     Console.WriteLine();
+    Console.WriteLine("SRS (Toyota/Lexus, experimental — addresses vary by model):");
+    Console.WriteLine("  --srs-tx <hex>      Override SRS request CAN header (default 7B0)");
+    Console.WriteLine("  --srs-rx <hex>      Override SRS response CAN header (default 7B8)");
+    Console.WriteLine();
     Console.WriteLine("EXAMPLES:");
     Console.WriteLine("  obd status --usb /dev/ttyUSB0 --make toyota");
     Console.WriteLine("  obd dtc read --wifi --make lexus");
-    Console.WriteLine("  obd dtc clear --bluetooth /dev/rfcomm0 --make toyota");
+    Console.WriteLine("  obd srs status --usb /dev/ttyUSB0 --make toyota");
+    Console.WriteLine("  obd srs clear --bluetooth /dev/rfcomm0 --make toyota --srs-tx 7B0 --srs-rx 7B8");
 }

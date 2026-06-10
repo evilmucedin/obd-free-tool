@@ -104,8 +104,13 @@ runtime libraries via `apt`. See [`scripts/README.md`](scripts/README.md).
   require a physical device.
 - **Pure where possible:** decoders (PID/DTC) are pure functions — easy to test
   exhaustively with `[Theory]`/`[InlineData]`.
-- **Safety:** code that writes to the vehicle (clearing DTCs, mode 04/08) must be
-  explicit, opt-in, and clearly logged. Never make write operations the default.
+- **Safety:** code that writes to the vehicle (clearing DTCs, mode 04/08, UDS
+  service 0x14) must be explicit, opt-in, and clearly logged. Never make write
+  operations the default. **SRS/airbag** clearing is especially sensitive — keep
+  the safety warning and confirmation, and never auto-clear.
+- **Non-OBD modules (SRS, ABS, …):** live in `Uds/` and use UDS-over-CAN with
+  make-specific CAN addresses. Treat addresses as configurable/experimental
+  (defaults + overrides), and keep parsing tolerant of ISO-TP multi-frame output.
 
 ## Workflow expectations for agents
 

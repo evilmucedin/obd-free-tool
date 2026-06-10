@@ -142,4 +142,34 @@ public class ObdSessionTests
 
         Assert.False(await session.ClearCodesAsync());
     }
+
+    [Fact]
+    public async Task ReadModuleStatusAsync_DefaultsToSrs_AndParsesCodes()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["1902FF"] = "5902FF8100130A\r>",
+        });
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota);
+
+        ModuleStatus status = await session.ReadModuleStatusAsync();
+
+        Assert.Equal("srs", status.Module.Key);
+        Assert.True(status.HasFaults);
+        Assert.Equal(["B0100-13"], status.Codes.Select(c => c.ToString()));
+        Assert.Contains("ATSH7B0", transport.SentCommands);
+    }
+
+    [Fact]
+    public async Task ClearModuleCodesAsync_Srs_ReturnsTrueOnAck()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["14FFFFFF"] = "54\r>",
+        });
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota);
+
+        Assert.True(await session.ClearModuleCodesAsync());
+        Assert.Contains("14FFFFFF", transport.SentCommands);
+    }
 }

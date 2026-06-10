@@ -38,6 +38,8 @@ Available now:
   (RPM, speed, coolant/intake temp, engine load, throttle).
 - 🩺 `dtc read` — read **stored** (Mode 03) and **pending** (Mode 07) trouble codes.
 - 🧹 `dtc clear` — clear trouble codes from memory (Mode 04), with confirmation.
+- 🛟 `srs status` / `srs clear` — read and clear **SRS / airbag** codes on
+  Toyota/Lexus (UDS over CAN), with a safety warning and confirmation.
 - 🖥️ **Two versions:** a console **CLI** (`ObdFree.Cli`) and a desktop **GUI**
   (`ObdFree.Gui`, built with [Avalonia](https://avaloniaui.net/)) — both share the
   same `ObdFree.Core` engine.
@@ -138,6 +140,29 @@ faster and more reliably than auto-detection:
 
 > Toyota/Lexus is the initial test target. If you hit issues on a specific
 > model, please open an issue with the model year and adapter type.
+
+### SRS / airbag (Toyota/Lexus)
+
+The airbag (SRS) system is **not** part of generic OBD-II — it's a separate ECU
+reached over **UDS (ISO 14229) on CAN**. This tool can read and clear SRS codes
+on Toyota/Lexus:
+
+```bash
+# Read SRS/airbag status and codes
+obd srs status --usb /dev/ttyUSB0 --make toyota
+
+# Clear SRS codes (asks for explicit confirmation)
+obd srs clear --usb /dev/ttyUSB0 --make toyota
+```
+
+> ⚠️ **Safety:** clearing SRS codes does **not** repair the fault — only clear
+> them *after* the airbag/seat-belt issue has been physically fixed. A faulty
+> SRS may not deploy in a crash.
+>
+> ⚠️ **Experimental:** Toyota/Lexus SRS CAN addresses vary by model and year.
+> The defaults are `--srs-tx 7B0 --srs-rx 7B8`; if the module doesn't respond,
+> override them with the values for your vehicle. Please validate on the actual
+> car and report what works for your model.
 
 > More commands (live streaming, freeze frames, VIN) are on the roadmap. See
 > [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

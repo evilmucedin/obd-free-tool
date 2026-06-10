@@ -1,12 +1,14 @@
 using ObdFree.Core.Transport;
+using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Cli;
 
-/// <summary>The fully-resolved options for a command: how to connect and which vehicle profile to use.</summary>
+/// <summary>The fully-resolved options for a command: how to connect, the vehicle profile, and the SRS module.</summary>
 /// <param name="Connection">The adapter connection.</param>
 /// <param name="Profile">The vehicle profile (protocol tuning).</param>
-internal sealed record CliOptions(ObdConnection Connection, VehicleProfile Profile);
+/// <param name="SrsModule">The SRS module addressing (with any header overrides applied).</param>
+internal sealed record CliOptions(ObdConnection Connection, VehicleProfile Profile, EcuModule SrsModule);
 
 /// <summary>
 /// Parses the flags shared by every command: connection (<c>--usb</c>,
@@ -24,6 +26,8 @@ internal static class CliOptionsParser
         int baud = 38400;
         string? makeKey = null;
         string? protocolText = null;
+        string? srsTx = null;
+        string? srsRx = null;
 
         for (int i = 0; i < args.Count; i++)
         {
@@ -57,6 +61,12 @@ internal static class CliOptionsParser
                 case "--protocol":
                     protocolText = NextValue(args, ref i);
                     break;
+                case "--srs-tx":
+                    srsTx = NextValue(args, ref i);
+                    break;
+                case "--srs-rx":
+                    srsRx = NextValue(args, ref i);
+                    break;
                 default:
                     error = $"Unknown argument: '{args[i]}'.";
                     return null;
@@ -88,7 +98,9 @@ internal static class CliOptionsParser
             _ => ObdConnection.WiFi(target),
         };
 
-        return new CliOptions(connection, profile);
+        EcuModule srsModule = ToyotaModules.Srs.WithHeaders(srsTx, srsRx);
+
+        return new CliOptions(connection, profile, srsModule);
     }
 
     /// <summary>
