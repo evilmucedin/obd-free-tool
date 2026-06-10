@@ -113,6 +113,12 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   collecting printable ASCII after the `49 02` response marker.
 
 ### Adapters (`Adapters/`)
+- `KnownAdapter` + `KnownAdapters` — catalog of popular off-the-shelf dongles
+  (the common Amazon models) with their link type (USB / Wi-Fi / classic
+  Bluetooth / BLE), chip, default Wi-Fi endpoint, baud, and recommended adapter
+  profile. `CreateConnection` builds the right `ObdConnection`. BLE-only dongles
+  are listed but flagged unsupported (no BLE transport yet). Drives the CLI
+  `dongles` command / `--dongle` flag and the GUI "Quick pick" dropdown.
 - `AdapterProfile` + `AdapterProfiles` — per-adapter reset/timing tuning.
   `Standard` (ATZ, no delays) and `Launch` (ATWS warm start + conservative delays
   for finicky clones and ELM327-compatible Launch Wi-Fi/BT units). `ObdSession`

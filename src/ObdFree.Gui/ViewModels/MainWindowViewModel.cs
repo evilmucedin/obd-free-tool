@@ -42,6 +42,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isBusy;
 
+    [ObservableProperty]
+    private KnownAdapter? _selectedDongle;
+
     /// <summary>The connection kinds offered in the UI.</summary>
     public IReadOnlyList<ConnectionKind> ConnectionKinds { get; } =
         [ConnectionKind.Usb, ConnectionKind.WiFi, ConnectionKind.Bluetooth];
@@ -51,6 +54,34 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>The adapter profiles offered in the UI.</summary>
     public IReadOnlyList<AdapterProfile> Adapters { get; } = [.. AdapterProfiles.All];
+
+    /// <summary>Known dongles the user can pick to auto-fill settings (supported ones only).</summary>
+    public IReadOnlyList<KnownAdapter> KnownDongles { get; } = [.. KnownAdapters.Supported];
+
+    /// <summary>Applies a picked dongle's connection kind, target, baud, and adapter profile.</summary>
+    partial void OnSelectedDongleChanged(KnownAdapter? value)
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        SelectedAdapter = value.AdapterProfile;
+        BaudRate = value.DefaultBaud > 0 ? value.DefaultBaud : BaudRate;
+        SelectedConnection = value.Link switch
+        {
+            DongleLink.WiFi => ConnectionKind.WiFi,
+            DongleLink.BluetoothClassic => ConnectionKind.Bluetooth,
+            _ => ConnectionKind.Usb,
+        };
+
+        // OnSelectedConnectionChanged set a sensible default target; for Wi-Fi
+        // dongles use their known endpoint.
+        if (value.Link == DongleLink.WiFi && value.DefaultEndpoint is { } endpoint)
+        {
+            Target = endpoint;
+        }
+    }
 
     /// <summary>True when an action can run (not already busy).</summary>
     public bool CanRun => !IsBusy;

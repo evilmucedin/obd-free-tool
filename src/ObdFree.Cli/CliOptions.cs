@@ -30,9 +30,11 @@ internal static class CliOptionsParser
         ConnectionKind? kind = null;
         string? target = null;
         int baud = 38400;
+        bool baudExplicit = false;
         string? makeKey = null;
         string? protocolText = null;
         string? adapterKey = null;
+        string? dongleKey = null;
         string? srsTx = null;
         string? srsRx = null;
 
@@ -61,6 +63,10 @@ internal static class CliOptionsParser
                         return null;
                     }
 
+                    baudExplicit = true;
+                    break;
+                case "--dongle":
+                    dongleKey = NextValue(args, ref i);
                     break;
                 case "--make":
                     makeKey = NextValue(args, ref i);
@@ -83,9 +89,46 @@ internal static class CliOptionsParser
             }
         }
 
+        // A known dongle fills in connection / baud / adapter defaults.
+        if (!string.IsNullOrWhiteSpace(dongleKey))
+        {
+            if (!KnownAdapters.TryGet(dongleKey, out KnownAdapter? dongle) || dongle is null)
+            {
+                error = $"Unknown --dongle '{dongleKey}'. Run 'obd dongles' to list known dongles.";
+                return null;
+            }
+
+            if (!dongle.IsSupported)
+            {
+                error = $"{dongle.DisplayName} uses Bluetooth LE, which isn't supported yet. "
+                    + "Use a USB, Wi-Fi, or classic-Bluetooth adapter (run 'obd dongles').";
+                return null;
+            }
+
+            adapterKey ??= dongle.AdapterProfileKey;
+            if (!baudExplicit && dongle.DefaultBaud > 0)
+            {
+                baud = dongle.DefaultBaud;
+            }
+
+            if (kind is null)
+            {
+                if (dongle.Link == DongleLink.WiFi)
+                {
+                    kind = ConnectionKind.WiFi;
+                    target = dongle.DefaultEndpoint;
+                }
+                else
+                {
+                    error = $"{dongle.DisplayName} needs a serial port. Add --usb <port> or --bluetooth <port>.";
+                    return null;
+                }
+            }
+        }
+
         if (kind is null)
         {
-            error = "No connection specified. Use --usb <port>, --wifi [host:port], or --bluetooth <port>.";
+            error = "No connection specified. Use --usb <port>, --wifi [host:port], --bluetooth <port>, or --dongle <key>.";
             return null;
         }
 

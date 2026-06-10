@@ -16,6 +16,12 @@ if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
     return 0;
 }
 
+if (args[0] is "dongles")
+{
+    PrintDongles();
+    return 0;
+}
+
 string command = args[0].ToLowerInvariant();
 string[] commandArgs = args[1..];
 
@@ -235,6 +241,33 @@ static async Task<int> RunSrsClearAsync(ObdSession session, EcuModule module)
     return ok ? 0 : 1;
 }
 
+static void PrintDongles()
+{
+    Console.WriteLine("Known OBD-II dongles (use with --dongle <key>):");
+    Console.WriteLine();
+    foreach (KnownAdapter d in KnownAdapters.All)
+    {
+        string link = d.Link switch
+        {
+            DongleLink.Usb => "USB",
+            DongleLink.WiFi => "Wi-Fi",
+            DongleLink.BluetoothClassic => "Bluetooth (classic)",
+            _ => "Bluetooth LE",
+        };
+        string status = d.IsSupported ? "supported" : "NOT YET (BLE)";
+        Console.WriteLine($"  {d.Key,-20} {d.DisplayName,-34} {link,-20} {status}");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("Examples:");
+    Console.WriteLine("  obd status --dongle veepeak-wifi               # Wi-Fi: endpoint auto-set");
+    Console.WriteLine("  obd readiness --dongle bafx-bt --bluetooth /dev/rfcomm0");
+    Console.WriteLine("  obd status --dongle generic-usb --usb /dev/ttyUSB0");
+    Console.WriteLine();
+    Console.WriteLine("BLE-only dongles (Veepeak BLE, OBDLink CX, Vgate iCar Pro BLE) aren't");
+    Console.WriteLine("supported yet — Bluetooth LE needs a transport we haven't built.");
+}
+
 static void PrintUsage(string version)
 {
     Console.WriteLine($"obd-free-tool {version} — free & open-source OBD-II tool");
@@ -250,12 +283,14 @@ static void PrintUsage(string version)
     Console.WriteLine("  dtc clear     Clear trouble codes from memory (asks for confirmation)");
     Console.WriteLine("  srs status    Show SRS/airbag status & codes (Toyota/Lexus, UDS on CAN)");
     Console.WriteLine("  srs clear     Clear SRS/airbag codes (safety warning + confirmation)");
+    Console.WriteLine("  dongles       List known Amazon OBD-II dongles and how to connect");
     Console.WriteLine();
     Console.WriteLine("CONNECTION (choose one):");
     Console.WriteLine("  --usb <port>        USB/serial adapter, e.g. /dev/ttyUSB0 or COM3");
     Console.WriteLine("  --wifi [host:port]  Wi-Fi adapter (default 192.168.0.10:35000)");
     Console.WriteLine("  --bluetooth <port>  Bluetooth (SPP) adapter serial device");
     Console.WriteLine("  --baud <rate>       Serial baud rate (default 38400)");
+    Console.WriteLine("  --dongle <key>      Auto-configure for a known dongle (see 'obd dongles')");
     Console.WriteLine();
     Console.WriteLine("VEHICLE (optional — improves protocol selection):");
     Console.WriteLine("  --make <make>       Car make: generic, toyota, lexus (prompts if omitted)");

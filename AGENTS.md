@@ -115,6 +115,10 @@ runtime libraries via `apt`. See [`scripts/README.md`](scripts/README.md).
   dongles (e.g. Launch DBSCAR / Thinkdiag) are **not** ELM327 — don't pretend to
   support them; detect them (`AdapterCompatibility`) and tell the user. Adapter
   timing quirks belong in `AdapterProfile`, not scattered through the code.
+- **Known dongles:** popular off-the-shelf models live in `KnownAdapters` with
+  their link/baud/endpoint/profile, so users pick a name instead of fiddling with
+  settings. BLE-only dongles are listed but `IsSupported == false` until a BLE
+  transport exists — don't silently treat them as usable.
 
 ## Workflow expectations for agents
 
