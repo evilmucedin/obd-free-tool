@@ -2,7 +2,9 @@ using System.Reflection;
 using ObdFree.Cli;
 using ObdFree.Core;
 using ObdFree.Core.Adapters;
+using ObdFree.Core.Config;
 using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Modes;
 using ObdFree.Core.Readiness;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
@@ -20,6 +22,11 @@ if (args[0] is "dongles")
 {
     PrintDongles();
     return 0;
+}
+
+if (args[0] is "config")
+{
+    return RunConfig(args[1..]);
 }
 
 string command = args[0].ToLowerInvariant();
@@ -41,14 +48,33 @@ if (options is null)
     return 2;
 }
 
+// Gate dangerous commands behind professional mode before touching the adapter.
+AppFeature? requiredFeature = command switch
+{
+    "dtc" when subcommand == "clear" => AppFeature.ClearDtc,
+    "srs" when subcommand == "clear" => AppFeature.SrsClear,
+    "srs" => AppFeature.SrsRead,
+    _ => null,
+};
+if (requiredFeature is { } feature && !ModePolicy.IsAllowed(options.Mode, feature))
+{
+    string label = $"{command} {subcommand}".Trim();
+    Console.Error.WriteLine($"'{label}' requires PROFESSIONAL mode (current: {options.Mode}).");
+    Console.Error.WriteLine("Re-run with '--mode professional', or set it permanently:");
+    Console.Error.WriteLine("  obd config set mode professional");
+    return 3;
+}
+
 Console.WriteLine($"obd-free-tool {version}");
+Console.WriteLine($"Mode       : {options.Mode}");
 Console.WriteLine($"Vehicle    : {options.Profile.DisplayName}");
 Console.WriteLine($"Adapter    : {options.Adapter.DisplayName}");
 Console.WriteLine($"Connecting via {options.Connection}...");
 
 try
 {
-    await using var session = new ObdSession(options.Connection.CreateTransport(), options.Profile, options.Adapter);
+    await using var session = new ObdSession(
+        options.Connection.CreateTransport(), options.Profile, options.Adapter, options.Mode);
 
     int code = command switch
     {
@@ -241,6 +267,42 @@ static async Task<int> RunSrsClearAsync(ObdSession session, EcuModule module)
     return ok ? 0 : 1;
 }
 
+static int RunConfig(string[] args)
+{
+    var store = new ConfigStore();
+    AppConfig config = store.Load();
+
+    if (args.Length == 0 || args[0] is "get" or "show")
+    {
+        Console.WriteLine($"Mode: {config.Mode}");
+        Console.WriteLine($"File: {store.Path}");
+        return 0;
+    }
+
+    if (args[0] is "path")
+    {
+        Console.WriteLine(store.Path);
+        return 0;
+    }
+
+    if (args[0] is "set" && args.Length >= 3 && args[1] is "mode")
+    {
+        if (!CliOptionsParser.TryParseMode(args[2], out OperatingMode mode))
+        {
+            Console.Error.WriteLine($"Unknown mode '{args[2]}'. Use 'safe' or 'professional'.");
+            return 2;
+        }
+
+        config.Mode = mode;
+        store.Save(config);
+        Console.WriteLine($"Default mode set to {mode}. ({store.Path})");
+        return 0;
+    }
+
+    Console.Error.WriteLine("Usage: obd config [get | path | set mode <safe|professional>]");
+    return 2;
+}
+
 static void PrintDongles()
 {
     Console.WriteLine("Known OBD-II dongles (use with --dongle <key>):");
@@ -284,6 +346,11 @@ static void PrintUsage(string version)
     Console.WriteLine("  srs status    Show SRS/airbag status & codes (Toyota/Lexus, UDS on CAN)");
     Console.WriteLine("  srs clear     Clear SRS/airbag codes (safety warning + confirmation)");
     Console.WriteLine("  dongles       List known Amazon OBD-II dongles and how to connect");
+    Console.WriteLine("  config        get | path | set mode <safe|professional>");
+    Console.WriteLine();
+    Console.WriteLine("MODE (safe is the default; professional unlocks writes & risky features):");
+    Console.WriteLine("  --mode <m>          safe or professional (overrides saved config for this run)");
+    Console.WriteLine("  Professional-only: 'dtc clear', 'srs status', 'srs clear'.");
     Console.WriteLine();
     Console.WriteLine("CONNECTION (choose one):");
     Console.WriteLine("  --usb <port>        USB/serial adapter, e.g. /dev/ttyUSB0 or COM3");

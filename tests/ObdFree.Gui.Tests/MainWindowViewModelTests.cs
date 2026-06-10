@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using ObdFree.Core.Adapters;
+using ObdFree.Core.Config;
+using ObdFree.Core.Modes;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Vehicles;
 using ObdFree.Gui.ViewModels;
@@ -8,6 +10,49 @@ namespace ObdFree.Gui.Tests;
 
 public class MainWindowViewModelTests
 {
+    // A view model backed by a throwaway config file so tests never touch the
+    // real per-user config.
+    private static MainWindowViewModel CreateVm(OperatingMode mode = OperatingMode.Safe)
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"obd-gui-cfg-{Guid.NewGuid():N}.json");
+        var store = new ConfigStore(path);
+        store.Save(new AppConfig { Mode = mode });
+        return new MainWindowViewModel(store);
+    }
+
+    [Fact]
+    public void SafeMode_GatesDangerousCommands()
+    {
+        var vm = CreateVm(OperatingMode.Safe);
+
+        Assert.False(vm.IsProfessional);
+        Assert.True(vm.StatusCommand.CanExecute(null));        // safe op allowed
+        Assert.False(vm.ClearCodesCommand.CanExecute(null));   // write blocked
+        Assert.False(vm.ReadSrsCommand.CanExecute(null));      // SRS blocked
+    }
+
+    [Fact]
+    public void ProfessionalMode_UnlocksDangerousCommands()
+    {
+        var vm = CreateVm(OperatingMode.Professional);
+
+        Assert.True(vm.IsProfessional);
+        Assert.True(vm.ClearCodesCommand.CanExecute(null));
+        Assert.True(vm.ReadSrsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SwitchingToProfessional_PersistsToConfig()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"obd-gui-cfg-{Guid.NewGuid():N}.json");
+        var vm = new MainWindowViewModel(new ConfigStore(path));
+
+        vm.SelectedMode = OperatingMode.Professional;
+
+        Assert.Equal(OperatingMode.Professional, new ConfigStore(path).Load().Mode);
+        File.Delete(path);
+    }
+
     [Fact]
     public void Defaults_AreUsbGenericAndReady()
     {
@@ -108,9 +153,9 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void ClearSrs_IsGatedBehindConfirmation()
+    public void ClearSrs_RequiresProfessionalAndConfirmation()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm(OperatingMode.Professional);
 
         Assert.False(vm.CanClearSrs);                 // not confirmed yet
         Assert.False(vm.ClearSrsCommand.CanExecute(null));
@@ -119,5 +164,15 @@ public class MainWindowViewModelTests
 
         Assert.True(vm.CanClearSrs);
         Assert.True(vm.ClearSrsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ClearSrs_BlockedInSafeModeEvenIfConfirmed()
+    {
+        var vm = CreateVm(OperatingMode.Safe);
+        vm.SrsClearConfirmed = true;
+
+        Assert.False(vm.CanClearSrs);
+        Assert.False(vm.ClearSrsCommand.CanExecute(null));
     }
 }
