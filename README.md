@@ -93,20 +93,34 @@ platforms.
 Connect over USB, Wi-Fi, or Bluetooth and run a command:
 
 ```bash
-# Adapter status + live-data snapshot
-dotnet run --project src/ObdFree.Cli -- status --usb /dev/ttyUSB0
+# Adapter status + live-data snapshot (Toyota/Lexus)
+dotnet run --project src/ObdFree.Cli -- status --usb /dev/ttyUSB0 --make toyota
 
 # Read stored & pending trouble codes over Wi-Fi (default 192.168.0.10:35000)
-dotnet run --project src/ObdFree.Cli -- dtc read --wifi
+dotnet run --project src/ObdFree.Cli -- dtc read --wifi --make lexus
 
 # Clear trouble codes from memory over Bluetooth (asks for confirmation)
-dotnet run --project src/ObdFree.Cli -- dtc clear --bluetooth /dev/rfcomm0
+dotnet run --project src/ObdFree.Cli -- dtc clear --bluetooth /dev/rfcomm0 --make toyota
 ```
 
 Connection flags (pick one): `--usb <port>`, `--wifi [host:port]`,
 `--bluetooth <port>`, plus optional `--baud <rate>` (default 38400). Classic
 Bluetooth ELM327 adapters appear as a serial device, so `--bluetooth` takes the
 serial port the OS bound to the adapter.
+
+### Vehicle profiles (Toyota / Lexus)
+
+Picking your car make selects the right OBD protocol up front, which connects
+faster and more reliably than auto-detection:
+
+- `--make toyota` / `--make lexus` → ISO 15765-4 CAN (11-bit, 500k), used by most
+  Toyota/Lexus from ~2008+.
+- `--make generic` (default) → adapter auto-detects the protocol.
+- If you omit `--make`, the CLI asks you to pick interactively.
+- Override the protocol for older cars with `--protocol auto|can|iso9141|kwp`.
+
+> Toyota/Lexus is the initial test target. If you hit issues on a specific
+> model, please open an issue with the model year and adapter type.
 
 > More commands (live streaming, freeze frames, VIN) are on the roadmap. See
 > [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

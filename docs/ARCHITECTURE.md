@@ -81,6 +81,16 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   string Unit }` (RPM, speed, coolant temp, load, throttle, …).
 - No I/O; trivial to test with `[Theory]`/`[InlineData]`.
 
+### Vehicles (`Vehicles/`)
+- `ObdProtocol` — enum whose values match the ELM327 `ATSP` code, so
+  `ToSetProtocolCommand()` yields `ATSP6` etc. `TryParse` accepts friendly names
+  (`can`, `iso9141`, …) or raw digits.
+- `VehicleProfile` + `VehicleProfiles` — per-make tuning. The key knob is the
+  preferred protocol. **Toyota** and **Lexus** (shared platform) default to
+  ISO 15765-4 CAN 11-bit/500k; **Generic** uses auto-detect. `ObdSession` applies
+  the profile's protocol during `ConnectAsync`, and the CLI's `--make` /
+  `--protocol` flags (with an interactive prompt) select it.
+
 ### Session (`ObdSession`)
 The public high-level entry point the CLI/GUI use (implemented):
 - `ConnectAsync()` — open transport + ELM327 init (`ATZ`, `ATE0`, `ATL0`,

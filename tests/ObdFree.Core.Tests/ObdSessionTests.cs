@@ -1,6 +1,7 @@
 using ObdFree.Core;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Tests.Transport;
+using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Core.Tests;
 
@@ -43,6 +44,31 @@ public class ObdSessionTests
         Assert.Equal(
             ["ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATSP0", "ATI"],
             transport.SentCommands);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_ToyotaProfile_SetsCanProtocol()
+    {
+        var transport = BuildTransport();
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota);
+
+        await session.ConnectAsync();
+
+        Assert.Equal(VehicleProfiles.Toyota, session.Profile);
+        Assert.Contains("ATSP6", transport.SentCommands); // ISO 15765-4 CAN 11/500
+        Assert.DoesNotContain("ATSP0", transport.SentCommands);
+    }
+
+    [Fact]
+    public async Task DefaultProfile_IsGenericAuto()
+    {
+        var transport = BuildTransport();
+        await using var session = new ObdSession(transport);
+
+        await session.ConnectAsync();
+
+        Assert.Equal(VehicleProfiles.Generic, session.Profile);
+        Assert.Contains("ATSP0", transport.SentCommands);
     }
 
     [Fact]

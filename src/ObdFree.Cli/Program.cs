@@ -24,8 +24,8 @@ if (command == "dtc" && commandArgs.Length > 0)
     commandArgs = commandArgs[1..];
 }
 
-ObdConnection? connection = ConnectionOptions.Parse(commandArgs, out _, out string? error);
-if (connection is null)
+CliOptions? options = CliOptionsParser.Parse(commandArgs, out string? error);
+if (options is null)
 {
     Console.Error.WriteLine($"Error: {error}");
     Console.Error.WriteLine("Run 'obd --help' for usage.");
@@ -33,11 +33,12 @@ if (connection is null)
 }
 
 Console.WriteLine($"obd-free-tool {version}");
-Console.WriteLine($"Connecting via {connection}...");
+Console.WriteLine($"Vehicle    : {options.Profile.DisplayName}");
+Console.WriteLine($"Connecting via {options.Connection}...");
 
 try
 {
-    await using var session = new ObdSession(connection.CreateTransport());
+    await using var session = new ObdSession(options.Connection.CreateTransport(), options.Profile);
 
     switch (command)
     {
@@ -150,8 +151,12 @@ static void PrintUsage(string version)
     Console.WriteLine("  --bluetooth <port>  Bluetooth (SPP) adapter serial device");
     Console.WriteLine("  --baud <rate>       Serial baud rate (default 38400)");
     Console.WriteLine();
+    Console.WriteLine("VEHICLE (optional — improves protocol selection):");
+    Console.WriteLine("  --make <make>       Car make: generic, toyota, lexus (prompts if omitted)");
+    Console.WriteLine("  --protocol <proto>  Force a protocol: auto, can, can29, iso9141, kwp");
+    Console.WriteLine();
     Console.WriteLine("EXAMPLES:");
-    Console.WriteLine("  obd status --usb /dev/ttyUSB0");
-    Console.WriteLine("  obd dtc read --wifi");
-    Console.WriteLine("  obd dtc clear --bluetooth /dev/rfcomm0");
+    Console.WriteLine("  obd status --usb /dev/ttyUSB0 --make toyota");
+    Console.WriteLine("  obd dtc read --wifi --make lexus");
+    Console.WriteLine("  obd dtc clear --bluetooth /dev/rfcomm0 --make toyota");
 }

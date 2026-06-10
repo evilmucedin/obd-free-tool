@@ -81,6 +81,19 @@ live engine RPM: mode `01`, PID `0C` → send `010C`.
 PIDs `00`, `20`, `40`, … return a bitmask of which PIDs in the next range the
 vehicle supports. We query these first to know what to offer the user.
 
+## Manufacturer notes: Toyota / Lexus
+
+Toyota and Lexus share a diagnostic platform. Most models from roughly 2008
+onward use **ISO 15765-4 CAN (11-bit, 500 kbaud)** — ELM327 protocol `6`
+(`ATSP6`). Selecting it explicitly (via `--make toyota`/`--make lexus`) avoids
+the adapter's slower auto-detection. Older Toyota/Lexus may use ISO 9141-2
+(`ATSP3`) or KWP2000; fall back with `--protocol auto` or `--protocol iso9141`.
+
+Generic OBD-II modes (01/03/04/07/09) used by this tool are standardized across
+makes, so reading status, reading DTCs, and clearing DTCs work regardless of
+manufacturer. Make-specific *enhanced* diagnostics (beyond generic OBD-II) are a
+future enhancement.
+
 ## Diagnostic Trouble Codes (DTCs)
 
 Mode `03` returns stored codes as 2-byte values decoded into the familiar

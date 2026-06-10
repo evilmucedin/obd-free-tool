@@ -2,6 +2,7 @@ using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Pids;
 using ObdFree.Core.Protocol;
 using ObdFree.Core.Transport;
+using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Core;
 
@@ -24,9 +25,12 @@ public sealed record ObdStatus(
 /// ELM327 adapter, then reads status / live data and reads or clears Diagnostic
 /// Trouble Codes — the core ForScan-style workflow.
 /// </summary>
-public sealed class ObdSession(IObdTransport transport) : IAsyncDisposable
+public sealed class ObdSession(IObdTransport transport, VehicleProfile? profile = null) : IAsyncDisposable
 {
     private readonly IObdTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+
+    /// <summary>Gets the vehicle profile guiding this session (defaults to generic).</summary>
+    public VehicleProfile Profile { get; } = profile ?? VehicleProfiles.Generic;
 
     private async Task EnsureOpenAsync(CancellationToken cancellationToken)
     {
@@ -38,7 +42,8 @@ public sealed class ObdSession(IObdTransport transport) : IAsyncDisposable
 
     /// <summary>
     /// Opens the transport and runs the ELM327 initialization sequence
-    /// (reset, echo/linefeed/spaces off, auto protocol).
+    /// (reset, echo/linefeed/spaces off, then sets the profile's preferred
+    /// protocol — auto for generic, ISO 15765-4 CAN for Toyota/Lexus).
     /// </summary>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The adapter identity reported by <c>ATI</c>.</returns>
@@ -51,7 +56,10 @@ public sealed class ObdSession(IObdTransport transport) : IAsyncDisposable
         await _transport.SendCommandAsync("ATL0", cancellationToken).ConfigureAwait(false);  // linefeeds off
         await _transport.SendCommandAsync("ATS0", cancellationToken).ConfigureAwait(false);  // spaces off
         await _transport.SendCommandAsync("ATH0", cancellationToken).ConfigureAwait(false);  // headers off
-        await _transport.SendCommandAsync("ATSP0", cancellationToken).ConfigureAwait(false); // auto protocol
+
+        // Set the protocol for this vehicle (ATSP0 = auto, ATSP6 = CAN 11/500, …).
+        await _transport.SendCommandAsync(Profile.PreferredProtocol.ToSetProtocolCommand(), cancellationToken)
+            .ConfigureAwait(false);
 
         string identity = (await _transport.SendCommandAsync("ATI", cancellationToken).ConfigureAwait(false))
             .Replace("\r", " ", StringComparison.Ordinal)
