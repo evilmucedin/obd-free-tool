@@ -108,6 +108,10 @@ runtime libraries via `apt`. See [`scripts/README.md`](scripts/README.md).
   service 0x14) must be explicit, opt-in, and clearly logged. Never make write
   operations the default. **SRS/airbag** clearing is especially sensitive — keep
   the safety warning and confirmation, and never auto-clear.
+- **Operating modes:** Safe (default) is read-only standard OBD-II; Professional
+  unlocks writes and advanced/experimental features. Gate new features in
+  `ModePolicy` and enforce them in `ObdSession` via `EnsureAllowed` — don't rely
+  on the UI alone. A new risky feature defaults to Professional.
 - **Non-OBD modules (SRS, ABS, …):** live in `Uds/` and use UDS-over-CAN with
   make-specific CAN addresses. Treat addresses as configurable/experimental
   (defaults + overrides), and keep parsing tolerant of ISO-TP multi-frame output.

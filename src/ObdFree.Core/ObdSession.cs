@@ -1,5 +1,6 @@
 using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Modes;
 using ObdFree.Core.Pids;
 using ObdFree.Core.Protocol;
 using ObdFree.Core.Readiness;
@@ -44,12 +45,24 @@ public sealed record ObdStatus(
 public sealed class ObdSession(
     IObdTransport transport,
     VehicleProfile? profile = null,
-    AdapterProfile? adapter = null) : IAsyncDisposable
+    AdapterProfile? adapter = null,
+    OperatingMode mode = OperatingMode.Safe) : IAsyncDisposable
 {
     private readonly IObdTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
 
+    /// <summary>Gets the operating mode that gates dangerous features (defaults to Safe).</summary>
+    public OperatingMode Mode { get; } = mode;
+
     /// <summary>Gets the vehicle profile guiding this session (defaults to generic).</summary>
     public VehicleProfile Profile { get; } = profile ?? VehicleProfiles.Generic;
+
+    private void EnsureAllowed(AppFeature feature)
+    {
+        if (!ModePolicy.IsAllowed(Mode, feature))
+        {
+            throw new FeatureNotAllowedInModeException(feature, Mode);
+        }
+    }
 
     /// <summary>Gets the adapter profile (reset/timing tuning; defaults to standard).</summary>
     public AdapterProfile Adapter { get; } = adapter ?? AdapterProfiles.Standard;
@@ -244,6 +257,7 @@ public sealed class ObdSession(
     /// <returns><see langword="true"/> if the ECU acknowledged the clear.</returns>
     public async Task<bool> ClearCodesAsync(CancellationToken cancellationToken = default)
     {
+        EnsureAllowed(AppFeature.ClearDtc);
         await EnsureOpenAsync(cancellationToken).ConfigureAwait(false);
         string raw = await _transport.SendCommandAsync("04", cancellationToken).ConfigureAwait(false);
         ObdResponse response = ObdResponse.Parse(raw);
@@ -264,6 +278,7 @@ public sealed class ObdSession(
     /// <returns>The module status (codes + derived warning flag).</returns>
     public async Task<ModuleStatus> ReadModuleStatusAsync(EcuModule? module = null, CancellationToken cancellationToken = default)
     {
+        EnsureAllowed(AppFeature.SrsRead);
         EcuModule target = module ?? ToyotaModules.Srs;
         await ConnectAsync(cancellationToken).ConfigureAwait(false);
 
@@ -283,6 +298,7 @@ public sealed class ObdSession(
     /// <returns><see langword="true"/> if the module acknowledged the clear.</returns>
     public async Task<bool> ClearModuleCodesAsync(EcuModule? module = null, CancellationToken cancellationToken = default)
     {
+        EnsureAllowed(AppFeature.SrsClear);
         EcuModule target = module ?? ToyotaModules.Srs;
         await ConnectAsync(cancellationToken).ConfigureAwait(false);
 

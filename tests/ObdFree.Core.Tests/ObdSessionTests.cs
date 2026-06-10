@@ -1,6 +1,7 @@
 using ObdFree.Core;
 using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Modes;
 using ObdFree.Core.Tests.Transport;
 using ObdFree.Core.Vehicles;
 
@@ -200,7 +201,7 @@ public class ObdSessionTests
         {
             ["04"] = "44\r>",
         });
-        await using var session = new ObdSession(transport);
+        await using var session = new ObdSession(transport, mode: OperatingMode.Professional);
 
         Assert.True(await session.ClearCodesAsync());
         Assert.Contains("04", transport.SentCommands);
@@ -213,9 +214,18 @@ public class ObdSessionTests
         {
             ["04"] = "CAN ERROR\r>",
         });
-        await using var session = new ObdSession(transport);
+        await using var session = new ObdSession(transport, mode: OperatingMode.Professional);
 
         Assert.False(await session.ClearCodesAsync());
+    }
+
+    [Fact]
+    public async Task ClearCodesAsync_InSafeMode_Throws()
+    {
+        var transport = BuildTransport(new Dictionary<string, string> { ["04"] = "44\r>" });
+        await using var session = new ObdSession(transport); // default Safe
+
+        await Assert.ThrowsAsync<FeatureNotAllowedInModeException>(() => session.ClearCodesAsync());
     }
 
     [Fact]
@@ -225,7 +235,7 @@ public class ObdSessionTests
         {
             ["1902FF"] = "5902FF8100130A\r>",
         });
-        await using var session = new ObdSession(transport, VehicleProfiles.Toyota);
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota, mode: OperatingMode.Professional);
 
         ModuleStatus status = await session.ReadModuleStatusAsync();
 
@@ -236,13 +246,22 @@ public class ObdSessionTests
     }
 
     [Fact]
+    public async Task SrsAccess_InSafeMode_Throws()
+    {
+        var transport = BuildTransport(new Dictionary<string, string> { ["1902FF"] = "5902FF8100130A\r>" });
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota); // Safe
+
+        await Assert.ThrowsAsync<FeatureNotAllowedInModeException>(() => session.ReadModuleStatusAsync());
+    }
+
+    [Fact]
     public async Task ClearModuleCodesAsync_Srs_ReturnsTrueOnAck()
     {
         var transport = BuildTransport(new Dictionary<string, string>
         {
             ["14FFFFFF"] = "54\r>",
         });
-        await using var session = new ObdSession(transport, VehicleProfiles.Toyota);
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota, mode: OperatingMode.Professional);
 
         Assert.True(await session.ClearModuleCodesAsync());
         Assert.Contains("14FFFFFF", transport.SentCommands);

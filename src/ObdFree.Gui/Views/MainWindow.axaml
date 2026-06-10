@@ -18,8 +18,15 @@
 
         <TextBlock DockPanel.Dock="Top" Text="obd-free-tool"
                    FontSize="22" FontWeight="Bold"/>
-        <TextBlock DockPanel.Dock="Top" Text="Free &amp; open-source OBD-II tool"
-                   Opacity="0.7" Margin="0,0,0,12"/>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
+            <TextBlock Grid.Column="0" Text="Free &amp; open-source OBD-II tool"
+                       Opacity="0.7" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="Mode" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <ComboBox Grid.Column="2" Width="160"
+                      ItemsSource="{Binding Modes}"
+                      SelectedItem="{Binding SelectedMode}"
+                      ToolTip.Tip="Safe = read-only. Professional unlocks writes &amp; risky features."/>
+        </Grid>
 
         <!-- Connection settings -->
         <Border DockPanel.Dock="Top" BorderBrush="#33888888" BorderThickness="1"

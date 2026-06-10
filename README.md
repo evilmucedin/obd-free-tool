@@ -55,6 +55,28 @@ On the roadmap:
 - 🚗 VIN decoding and per-vehicle supported-PID discovery.
 - 📷 Freeze-frame data and human-readable DTC descriptions.
 
+## Safe vs Professional mode
+
+The app runs in one of two modes, so casual users can't accidentally do harm:
+
+- **Safe** (default) — read-only, standard OBD-II: `status`, `readiness`, `vin`,
+  `dtc read`. Nothing that writes to the car.
+- **Professional** — unlocks write/advanced features that can be risky:
+  `dtc clear`, and all SRS/airbag access (`srs status`, `srs clear`).
+
+The mode is **enforced in the core** (not just hidden in the UI), persisted, and
+overridable per run:
+
+```bash
+obd config get                        # show current mode + config file path
+obd config set mode professional      # persist professional mode
+obd dtc clear --usb /dev/ttyUSB0 --mode professional   # one-off override
+```
+
+In the GUI, a **Mode** dropdown (top-right) switches modes and persists the
+choice; dangerous buttons stay disabled in Safe mode. The setting lives in a
+small JSON file under your OS config dir (e.g. `~/.config/obd-free-tool/config.json`).
+
 ## Tech stack
 
 - **C# / .NET 10** — one codebase, runs everywhere.

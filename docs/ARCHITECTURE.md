@@ -26,6 +26,8 @@ ObdFree.sln
 │   ├── Adapters/         adapter profiles (timing) + ELM327 compatibility check
 │   ├── Readiness/        I/M readiness monitors + MIL (Mode 01 PID 01)
 │   ├── VehicleInfo/      VIN decoding (Mode 09 PID 02)
+│   ├── Modes/            safe/professional operating modes + policy
+│   ├── Config/           persisted user settings (operating mode)
 │   └── Uds/              UDS-on-CAN client for SRS/airbag & other modules
 ├── src/ObdFree.Cli       console app (AssemblyName: obd)
 ├── src/ObdFree.Gui       Avalonia desktop app (MVVM)
@@ -101,6 +103,18 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   ISO 15765-4 CAN 11-bit/500k; **Generic** uses auto-detect. `ObdSession` applies
   the profile's protocol during `ConnectAsync`, and the CLI's `--make` /
   `--protocol` flags (with an interactive prompt) select it.
+
+### Modes & Config (`Modes/`, `Config/`)
+- `OperatingMode` (Safe / Professional) + `AppFeature` + `ModePolicy` — the
+  single source of truth for what each mode permits. Safe = read-only standard
+  OBD-II; Professional unlocks writes (`ClearDtc`) and advanced/experimental
+  features (`SrsRead`, `SrsClear`).
+- **Enforced in the core:** `ObdSession` calls `EnsureAllowed(feature)` and throws
+  `FeatureNotAllowedInModeException` if disallowed — so the UI can't bypass it.
+  CLI/GUI also pre-check `ModePolicy` for friendly messaging and to gate controls.
+- `AppConfig` + `ConfigStore` persist the chosen mode as JSON under the OS config
+  dir (`ConfigStore` takes an explicit path in tests, so they never touch the
+  real user config).
 
 ### Readiness (`Readiness/`)
 - `MonitorStatusDecoder` decodes Mode 01 PID 01 (A/B/C/D) into a `MonitorStatus`:

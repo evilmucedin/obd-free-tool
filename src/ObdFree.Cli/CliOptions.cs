@@ -1,4 +1,6 @@
 using ObdFree.Core.Adapters;
+using ObdFree.Core.Config;
+using ObdFree.Core.Modes;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
@@ -10,11 +12,13 @@ namespace ObdFree.Cli;
 /// <param name="Profile">The vehicle profile (protocol tuning).</param>
 /// <param name="Adapter">The adapter profile (reset/timing tuning).</param>
 /// <param name="SrsModule">The SRS module addressing (with any header overrides applied).</param>
+/// <param name="Mode">The effective operating mode (safe/professional).</param>
 internal sealed record CliOptions(
     ObdConnection Connection,
     VehicleProfile Profile,
     AdapterProfile Adapter,
-    EcuModule SrsModule);
+    EcuModule SrsModule,
+    OperatingMode Mode);
 
 /// <summary>
 /// Parses the flags shared by every command: connection (<c>--usb</c>,
@@ -35,6 +39,7 @@ internal static class CliOptionsParser
         string? protocolText = null;
         string? adapterKey = null;
         string? dongleKey = null;
+        string? modeText = null;
         string? srsTx = null;
         string? srsRx = null;
 
@@ -67,6 +72,9 @@ internal static class CliOptionsParser
                     break;
                 case "--dongle":
                     dongleKey = NextValue(args, ref i);
+                    break;
+                case "--mode":
+                    modeText = NextValue(args, ref i);
                     break;
                 case "--make":
                     makeKey = NextValue(args, ref i);
@@ -156,6 +164,17 @@ internal static class CliOptionsParser
             adapter = found;
         }
 
+        // Effective mode: explicit --mode overrides the persisted config; else config (default Safe).
+        OperatingMode mode = new ConfigStore().Load().Mode;
+        if (!string.IsNullOrWhiteSpace(modeText))
+        {
+            if (!TryParseMode(modeText, out mode))
+            {
+                error = $"Unknown --mode '{modeText}'. Use 'safe' or 'professional'.";
+                return null;
+            }
+        }
+
         ObdConnection connection = kind switch
         {
             ConnectionKind.Usb => ObdConnection.Usb(target, baud),
@@ -165,7 +184,24 @@ internal static class CliOptionsParser
 
         EcuModule srsModule = ToyotaModules.Srs.WithHeaders(srsTx, srsRx);
 
-        return new CliOptions(connection, profile, adapter, srsModule);
+        return new CliOptions(connection, profile, adapter, srsModule, mode);
+    }
+
+    /// <summary>Parses a mode name (<c>safe</c> / <c>professional</c>, or <c>pro</c>).</summary>
+    public static bool TryParseMode(string text, out OperatingMode mode)
+    {
+        switch (text.Trim().ToLowerInvariant())
+        {
+            case "safe":
+                mode = OperatingMode.Safe;
+                return true;
+            case "professional" or "pro":
+                mode = OperatingMode.Professional;
+                return true;
+            default:
+                mode = OperatingMode.Safe;
+                return false;
+        }
     }
 
     /// <summary>

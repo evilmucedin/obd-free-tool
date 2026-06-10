@@ -6,7 +6,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ObdFree.Core;
 using ObdFree.Core.Adapters;
+using ObdFree.Core.Config;
 using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Modes;
 using ObdFree.Core.Readiness;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
@@ -21,6 +23,22 @@ namespace ObdFree.Gui.ViewModels;
 /// </summary>
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private readonly ConfigStore _configStore;
+
+    /// <summary>Creates the view model using the default per-user config store.</summary>
+    public MainWindowViewModel()
+        : this(new ConfigStore())
+    {
+    }
+
+    /// <summary>Creates the view model with a specific config store (used by tests).</summary>
+    /// <param name="configStore">The config store to load/save the operating mode.</param>
+    public MainWindowViewModel(ConfigStore configStore)
+    {
+        _configStore = configStore;
+        _selectedMode = configStore.Load().Mode;
+    }
+
     [ObservableProperty]
     private ConnectionKind _selectedConnection = ConnectionKind.Usb;
 
@@ -40,10 +58,50 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _output = "Ready. Pick a connection and a car make, then choose an action.";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StatusCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadinessCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadVinCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadCodesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearCodesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadSrsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearSrsCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProfessional))]
+    [NotifyCanExecuteChangedFor(nameof(ClearCodesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadSrsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearSrsCommand))]
+    private OperatingMode _selectedMode;
+
+    [ObservableProperty]
     private KnownAdapter? _selectedDongle;
+
+    /// <summary>The operating modes offered in the UI.</summary>
+    public IReadOnlyList<OperatingMode> Modes { get; } = [OperatingMode.Safe, OperatingMode.Professional];
+
+    /// <summary>True when professional mode is selected (dangerous features unlocked).</summary>
+    public bool IsProfessional => SelectedMode == OperatingMode.Professional;
+
+    /// <summary>Persists the chosen mode so it sticks across launches.</summary>
+    partial void OnSelectedModeChanged(OperatingMode value)
+    {
+        AppConfig config = _configStore.Load();
+        config.Mode = value;
+        _configStore.Save(config);
+
+        OnPropertyChanged(nameof(CanClearDtc));
+        OnPropertyChanged(nameof(CanUseSrs));
+        OnPropertyChanged(nameof(CanClearSrs));
+    }
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanRun));
+        OnPropertyChanged(nameof(CanClearDtc));
+        OnPropertyChanged(nameof(CanUseSrs));
+        OnPropertyChanged(nameof(CanClearSrs));
+    }
 
     /// <summary>The connection kinds offered in the UI.</summary>
     public IReadOnlyList<ConnectionKind> ConnectionKinds { get; } =
@@ -83,14 +141,14 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    /// <summary>True when an action can run (not already busy).</summary>
+    /// <summary>True when a safe action can run (not already busy).</summary>
     public bool CanRun => !IsBusy;
 
-    partial void OnIsBusyChanged(bool value)
-    {
-        OnPropertyChanged(nameof(CanRun));
-        OnPropertyChanged(nameof(CanClearSrs));
-    }
+    /// <summary>True when clearing DTCs is allowed (professional mode, not busy).</summary>
+    public bool CanClearDtc => !IsBusy && IsProfessional;
+
+    /// <summary>True when SRS access is allowed (professional mode, not busy).</summary>
+    public bool CanUseSrs => !IsBusy && IsProfessional;
 
     partial void OnSelectedConnectionChanged(ConnectionKind value) =>
         Target = value switch
@@ -177,8 +235,8 @@ public partial class MainWindowViewModel : ViewModelBase
         return vin is null ? "VIN unavailable (no response to Mode 09 PID 02)." : $"VIN: {vin}";
     });
 
-    /// <summary>Clears stored trouble codes from memory (Mode 04).</summary>
-    [RelayCommand(CanExecute = nameof(CanRun))]
+    /// <summary>Clears stored trouble codes from memory (Mode 04) — professional only.</summary>
+    [RelayCommand(CanExecute = nameof(CanClearDtc))]
     private Task ClearCodesAsync() => RunAsync(async session =>
     {
         await session.ConnectAsync();
@@ -188,8 +246,8 @@ public partial class MainWindowViewModel : ViewModelBase
             : "Clear was not acknowledged by the ECU.";
     });
 
-    /// <summary>Reads SRS/airbag status and codes (Toyota/Lexus, UDS over CAN).</summary>
-    [RelayCommand(CanExecute = nameof(CanRun))]
+    /// <summary>Reads SRS/airbag status and codes (Toyota/Lexus, UDS over CAN) — professional only.</summary>
+    [RelayCommand(CanExecute = nameof(CanUseSrs))]
     private Task ReadSrsAsync() => RunAsync(async session =>
     {
         ModuleStatus status = await session.ReadModuleStatusAsync(ToyotaModules.Srs);
@@ -226,12 +284,11 @@ public partial class MainWindowViewModel : ViewModelBase
     /// safety warning. The Clear SRS button stays disabled until this is set.
     /// </summary>
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ClearSrsCommand))]
     private bool _srsClearConfirmed;
 
-    /// <summary>True when SRS clearing is allowed (not busy and the warning is acknowledged).</summary>
-    public bool CanClearSrs => !IsBusy && SrsClearConfirmed;
-
-    partial void OnSrsClearConfirmedChanged(bool value) => OnPropertyChanged(nameof(CanClearSrs));
+    /// <summary>True when SRS clearing is allowed (professional, acknowledged, not busy).</summary>
+    public bool CanClearSrs => !IsBusy && IsProfessional && SrsClearConfirmed;
 
     private async Task RunAsync(System.Func<ObdSession, Task<string>> action)
     {
@@ -245,7 +302,8 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             ObdConnection connection = BuildConnection();
-            await using var session = new ObdSession(connection.CreateTransport(), SelectedProfile, SelectedAdapter);
+            await using var session = new ObdSession(
+                connection.CreateTransport(), SelectedProfile, SelectedAdapter, SelectedMode);
             string result = await action(session);
 
             // Flag proprietary (non-ELM327) dongles such as Launch DBSCAR.
