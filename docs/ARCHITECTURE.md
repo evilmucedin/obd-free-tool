@@ -30,14 +30,24 @@ ObdFree.sln
 │   ├── Config/           persisted user settings (operating mode)
 │   └── Uds/              UDS-on-CAN client for SRS/airbag & other modules
 ├── src/ObdFree.Cli       console app (AssemblyName: obd)
-├── src/ObdFree.Gui       Avalonia desktop app (MVVM)
+├── src/ObdFree.App       shared Avalonia UI (App, views, view models)
+├── src/ObdFree.Gui       desktop head (Avalonia.Desktop) over ObdFree.App
+├── src/ObdFree.iOS       iOS head (Avalonia.iOS) over ObdFree.App  [not in slnx]
 ├── tests/ObdFree.Core.Tests   xUnit tests + FakeObdTransport
-└── tests/ObdFree.Gui.Tests    xUnit tests for the GUI view models
+└── tests/ObdFree.Gui.Tests    xUnit tests for the shared view models
 ```
 
-Both front-ends are deliberately thin: the CLI parses args and prints text; the
-GUI binds controls to a view model. Neither contains OBD logic — they both drive
+Front-ends are deliberately thin: the CLI parses args and prints text; the GUI
+heads bind controls to a view model. None contain OBD logic — they all drive
 `ObdSession` from `ObdFree.Core`, so behavior stays consistent and testable.
+
+**Avalonia multi-head:** the UI (App, views, view models) lives once in
+`ObdFree.App`. `ObdFree.Gui` (desktop) and `ObdFree.iOS` (iPhone/iPad) are thin
+platform heads that reference it and add the platform windowing backend
+(`Avalonia.Desktop` / `Avalonia.iOS`). **`ObdFree.iOS` is excluded from
+`ObdFree.slnx`** because `net10.0-ios` only builds on macOS with Xcode + the iOS
+workload; keeping it out of the solution keeps the Linux/Windows CI green. Build
+it via `scripts/publish-ios.sh`.
 
 ## Layered overview
 
@@ -176,12 +186,17 @@ The public high-level entry point the CLI/GUI use (implemented):
 Thin layer: parse args/flags, build the right transport, drive a session,
 format output (human table, CSV, JSON), handle logging.
 
-### GUI (`ObdFree.Gui`)
-Avalonia (MVVM) desktop app. `MainWindowViewModel` exposes the connection kind,
-target, baud, and car-make selections plus `Status` / `ReadCodes` / `ClearCodes`
-relay commands — each builds an `ObdConnection` and drives an `ObdSession`
-exactly like the CLI. The view models are unit-tested in `ObdFree.Gui.Tests`
-without needing a display.
+### Shared UI (`ObdFree.App`) and heads (`ObdFree.Gui`, `ObdFree.iOS`)
+Avalonia (MVVM). `MainWindowViewModel` exposes the connection kind, target,
+baud, car-make/adapter selections, and operating mode, plus relay commands
+(`Status` / `Readiness` / `ReadVin` / `ReadCodes` / `ClearCodes` / `ReadSrs` /
+`ClearSrs`) — each builds an `ObdConnection` and drives an `ObdSession` exactly
+like the CLI. View models are unit-tested in `ObdFree.Gui.Tests` without a
+display. The desktop and iOS heads just host this shared `App`.
+
+> iOS note: third-party iOS apps can't use classic Bluetooth (SPP) or USB serial,
+> so the iOS build connects via **Wi-Fi** (`TcpObdTransport`) today; BLE support
+> is a tracked follow-up.
 
 ## Data flow (reading live RPM)
 

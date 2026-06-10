@@ -14,7 +14,7 @@ using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
 
-namespace ObdFree.Gui.ViewModels;
+namespace ObdFree.App.ViewModels;
 
 /// <summary>
 /// Drives the main window: choose a connection (USB / Wi-Fi / Bluetooth) and a

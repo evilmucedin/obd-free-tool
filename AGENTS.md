@@ -35,8 +35,13 @@ auditable.
   macOS**. Don't use platform-specific APIs without an abstraction + fallback.
 - **GUI:** [Avalonia](https://avaloniaui.net/) (MIT) with MVVM via
   `CommunityToolkit.Mvvm`. Chosen over MAUI/WinForms/WPF because it's the only
-  free, open-source toolkit that runs on all three OSes. Keep logic in
-  `ObdFree.Core` and view models thin and testable.
+  free, open-source toolkit that runs on all three OSes **and iOS**. The UI lives
+  once in `ObdFree.App`; `ObdFree.Gui` (desktop) and `ObdFree.iOS` are thin heads.
+  Keep logic in `ObdFree.Core` and view models thin and testable.
+- **iOS:** `ObdFree.iOS` targets `net10.0-ios` and is **excluded from the
+  solution** (only builds on macOS with Xcode + the iOS workload), so CI stays
+  green. Build/publish via `scripts/publish-ios.sh`. iOS can't use classic
+  Bluetooth/USB — only Wi-Fi (TCP) works today; BLE is a follow-up.
 - **Testing:** xUnit + `coverlet` for coverage. **Heavy test coverage is a
   first-class requirement** — new logic ships with tests.
 - **CI/CD:** GitHub Actions (`.github/workflows/`). We lean on GitHub
@@ -55,10 +60,12 @@ auditable.
 ├── src/
 │   ├── ObdFree.Core/            # core library: transports, protocol, decoding
 │   ├── ObdFree.Cli/             # console CLI (AssemblyName: obd)
-│   └── ObdFree.Gui/             # Avalonia desktop GUI (MVVM)
+│   ├── ObdFree.App/             # shared Avalonia UI (App, views, view models)
+│   ├── ObdFree.Gui/             # desktop head over ObdFree.App
+│   └── ObdFree.iOS/             # iOS head over ObdFree.App (NOT in slnx; macOS-only)
 ├── tests/
 │   ├── ObdFree.Core.Tests/      # xUnit tests (incl. FakeObdTransport)
-│   └── ObdFree.Gui.Tests/       # xUnit tests for the GUI view models
+│   └── ObdFree.Gui.Tests/       # xUnit tests for the shared view models
 ├── .github/workflows/ci.yml     # build + test matrix + format check
 ├── scripts/                     # cross-platform build/test/run/publish helpers
 └── docs/                        # human + agent documentation

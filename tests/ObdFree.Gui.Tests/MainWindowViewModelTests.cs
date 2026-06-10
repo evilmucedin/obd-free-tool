@@ -1,10 +1,10 @@
 using System.ComponentModel;
+using ObdFree.App.ViewModels;
 using ObdFree.Core.Adapters;
 using ObdFree.Core.Config;
 using ObdFree.Core.Modes;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Vehicles;
-using ObdFree.Gui.ViewModels;
 
 namespace ObdFree.Gui.Tests;
 

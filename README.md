@@ -44,10 +44,10 @@ Available now:
 - 🧹 `dtc clear` — clear trouble codes from memory (Mode 04), with confirmation.
 - 🛟 `srs status` / `srs clear` — read and clear **SRS / airbag** codes on
   Toyota/Lexus (UDS over CAN), with a safety warning and confirmation.
-- 🖥️ **Two versions:** a console **CLI** (`ObdFree.Cli`) and a desktop **GUI**
-  (`ObdFree.Gui`, built with [Avalonia](https://avaloniaui.net/)) — both share the
-  same `ObdFree.Core` engine.
-- 💻 Cross-platform: **Windows, Linux (incl. Ubuntu), and macOS**.
+- 🖥️ **Multiple front-ends:** a console **CLI** (`ObdFree.Cli`), a desktop **GUI**
+  (`ObdFree.Gui`), and an **iOS app** (`ObdFree.iOS`) — all sharing the same
+  Avalonia UI (`ObdFree.App`) and `ObdFree.Core` engine.
+- 💻 Cross-platform: **Windows, Linux (incl. Ubuntu), macOS**, and **iOS**.
 
 On the roadmap:
 
@@ -137,13 +137,41 @@ Or use the cross-platform helper scripts (no flags to memorize):
 See [`scripts/README.md`](scripts/README.md) for all targets and supported
 platforms.
 
-### Two versions, one engine
+### Front-ends, one engine
 
-Both apps are thin shells over the shared, well-tested `ObdFree.Core` library:
+Every front-end is a thin shell over the shared, well-tested `ObdFree.Core`
+engine and the shared Avalonia UI in `ObdFree.App`:
 
-- **CLI** — scriptable, headless, great for automation and CI.
-- **GUI** — pick your connection and car make from dropdowns, then click
-  **Status**, **Read codes**, or **Clear codes**.
+- **CLI** (`ObdFree.Cli`) — scriptable, headless, great for automation and CI.
+- **Desktop GUI** (`ObdFree.Gui`) — Avalonia app for Windows/Linux/macOS.
+- **iOS** (`ObdFree.iOS`) — Avalonia iOS app for iPhone/iPad (see below).
+
+### iOS app (Apple App Store)
+
+The iOS app reuses the same UI and engine via [Avalonia iOS](https://avaloniaui.net/).
+It builds **only on macOS** with Xcode and the .NET iOS workload
+(`dotnet workload install ios`), so it is intentionally kept out of the solution
+and CI. Prepare an App Store build with:
+
+```bash
+./scripts/publish-ios.sh    # preflight + (signed) .ipa in artifacts/ios/
+```
+
+**What you need to publish** (all Apple-imposed):
+
+- A paid **Apple Developer Program** membership (~$99/year).
+- A **Distribution certificate** + **App Store provisioning profile** for the
+  bundle id `io.github.evilmucedin.obdfree` (pass them to the script via the
+  `CODESIGN_KEY` / `PROVISIONING_PROFILE` / `APPLE_TEAM_ID` env vars).
+
+**Adapter support on iOS** — important: iOS does **not** allow third-party apps
+to use classic Bluetooth (SPP) or USB serial. So on iOS:
+
+- ✅ **Wi-Fi** ELM327 adapters work today (TCP — `TcpObdTransport`).
+- ⏳ **Bluetooth LE** adapters would work but need the not-yet-built BLE transport.
+- ❌ USB / classic-Bluetooth dongles are not usable on iOS (OS limitation).
+
+So pick a **Wi-Fi** OBD-II adapter for the iPhone/iPad app.
 
 ### Talking to an adapter
 

@@ -22,6 +22,7 @@ All scripts can be run from anywhere; they resolve the repo root themselves.
 | Run the **GUI** | `./scripts/run-gui.sh` | `./scripts/run-gui.ps1` |
 | Publish the **CLI** | `./scripts/publish-cli.sh [RID]` | `./scripts/publish-cli.ps1 [-Rid <rid>]` |
 | Publish the **GUI** | `./scripts/publish-gui.sh [RID]` | `./scripts/publish-gui.ps1 [-Rid <rid>]` |
+| Prepare the **iOS** App Store build | `./scripts/publish-ios.sh` (macOS only) | — |
 
 `build.sh` and `test.sh` cover the whole solution (both apps + the core library
 and tests), so there's a single build/test step for everything.
@@ -96,3 +97,25 @@ Supported RIDs:
 
 > Both versions are free and open-source forever — these binaries are too. Ship
 > them anywhere.
+
+## iOS App Store build
+
+`publish-ios.sh` runs on **macOS only** and preflights the requirements (Xcode,
+the `ios` .NET workload) before building. With signing env vars set it produces
+an upload-ready `.ipa` in `artifacts/ios/`; without them it does an unsigned
+validation build.
+
+```bash
+# Validation build (no signing)
+./scripts/publish-ios.sh
+
+# Upload-ready signed build
+APPLE_TEAM_ID=ABCDE12345 \
+CODESIGN_KEY="Apple Distribution: Your Name (ABCDE12345)" \
+PROVISIONING_PROFILE="OBD Free App Store" \
+./scripts/publish-ios.sh
+```
+
+Publishing to the App Store additionally requires a paid Apple Developer Program
+membership. `src/ObdFree.iOS` is **not** in the solution (it only builds on macOS
+with the iOS workload), so the regular `build.sh`/`test.sh` don't touch it.
