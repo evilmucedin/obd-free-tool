@@ -2,8 +2,10 @@ using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Pids;
 using ObdFree.Core.Protocol;
+using ObdFree.Core.Readiness;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
+using ObdFree.Core.VehicleInfo;
 using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Core;
@@ -190,6 +192,49 @@ public sealed class ObdSession(
     /// <returns>The pending trouble codes.</returns>
     public Task<IReadOnlyList<DiagnosticTroubleCode>> ReadPendingCodesAsync(CancellationToken cancellationToken = default)
         => ReadCodesAsync("07", DtcParser.PendingResponseByte, cancellationToken);
+
+    /// <summary>
+    /// Reads permanent trouble codes (Mode 0A). Permanent codes cannot be cleared
+    /// by a scan tool or by disconnecting the battery — they clear only after the
+    /// vehicle confirms the fault is fixed. US emissions inspections check these.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The permanent trouble codes.</returns>
+    public Task<IReadOnlyList<DiagnosticTroubleCode>> ReadPermanentCodesAsync(CancellationToken cancellationToken = default)
+        => ReadCodesAsync("0A", DtcParser.PermanentResponseByte, cancellationToken);
+
+    /// <summary>
+    /// Reads emissions readiness ("I/M readiness") and MIL state (Mode 01 PID 01)
+    /// — the core information for a US smog / emissions inspection.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The readiness status, or <see langword="null"/> if unavailable.</returns>
+    public async Task<MonitorStatus?> ReadReadinessAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureOpenAsync(cancellationToken).ConfigureAwait(false);
+        string raw = await _transport.SendCommandAsync("0101", cancellationToken).ConfigureAwait(false);
+        ObdResponse response = ObdResponse.Parse(raw);
+        if (!response.IsSuccess
+            || !ObdPayload.TryGetParameter(response.Data, 0x01, 0x01, out byte[] payload)
+            || payload.Length < 4)
+        {
+            return null;
+        }
+
+        return MonitorStatusDecoder.Decode(payload[0], payload[1], payload[2], payload[3]);
+    }
+
+    /// <summary>Reads the Vehicle Identification Number (VIN) — Mode 09 PID 02.</summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The VIN, or <see langword="null"/> if unavailable.</returns>
+    public async Task<string?> ReadVinAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureOpenAsync(cancellationToken).ConfigureAwait(false);
+        string raw = await _transport.SendCommandAsync("0902", cancellationToken).ConfigureAwait(false);
+
+        // Mode 09 VIN is multi-frame; UdsResponse cleans ISO-TP frame formatting.
+        return VinDecoder.Decode(UdsResponse.Parse(raw).Data);
+    }
 
     /// <summary>
     /// Clears stored trouble codes and the MIL ("check engine" light) — Mode 04.

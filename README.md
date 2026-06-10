@@ -36,7 +36,11 @@ Available now:
   Bluetooth (SPP)**.
 - 📊 `status` — adapter info, battery voltage, and a live-data snapshot
   (RPM, speed, coolant/intake temp, engine load, throttle).
-- 🩺 `dtc read` — read **stored** (Mode 03) and **pending** (Mode 07) trouble codes.
+- 🇺🇸 `readiness` — **I/M readiness & MIL status** (Mode 01 PID 01): the emissions
+  monitors a **US smog/emissions inspection** checks, with a "likely ready?" verdict.
+- 🪪 `vin` — read the **Vehicle Identification Number** (Mode 09 PID 02).
+- 🩺 `dtc read` — read **stored** (Mode 03), **pending** (Mode 07), and
+  **permanent** (Mode 0A) trouble codes.
 - 🧹 `dtc clear` — clear trouble codes from memory (Mode 04), with confirmation.
 - 🛟 `srs status` / `srs clear` — read and clear **SRS / airbag** codes on
   Toyota/Lexus (UDS over CAN), with a safety warning and confirmation.
@@ -115,6 +119,9 @@ Connect over USB, Wi-Fi, or Bluetooth and run a command:
 # Adapter status + live-data snapshot (Toyota/Lexus)
 dotnet run --project src/ObdFree.Cli -- status --usb /dev/ttyUSB0 --make toyota
 
+# Will it pass a US smog check? (emissions readiness + MIL)
+dotnet run --project src/ObdFree.Cli -- readiness --usb /dev/ttyUSB0
+
 # Read stored & pending trouble codes over Wi-Fi (default 192.168.0.10:35000)
 dotnet run --project src/ObdFree.Cli -- dtc read --wifi --make lexus
 
@@ -160,6 +167,26 @@ faster and more reliably than auto-detection:
 
 > Toyota/Lexus is the initial test target. If you hit issues on a specific
 > model, please open an issue with the model year and adapter type.
+
+### US emissions & smog checks
+
+OBD-II was mandated in the USA by CARB/EPA primarily for **emissions control**, so
+the tool covers the cases a US inspection cares about:
+
+```bash
+obd readiness --usb /dev/ttyUSB0   # MIL state + I/M readiness monitors + verdict
+obd vin --usb /dev/ttyUSB0         # Vehicle Identification Number
+obd dtc read --usb /dev/ttyUSB0    # stored + pending + PERMANENT codes
+```
+
+- **Readiness / I/M monitors** (Mode 01 PID 01): shows whether the MIL is on, how
+  many DTCs are stored, and which emissions monitors (catalyst, EVAP, O2, EGR, …)
+  have completed. Most states require the MIL off and at most one incomplete
+  monitor — the tool prints a "likely ready?" verdict (guidance only; rules vary
+  by state).
+- **Permanent DTCs** (Mode 0A): these can't be cleared by a scan tool or a battery
+  disconnect, so they prevent "clear-and-pass" cheating — inspections check them.
+- **VIN** (Mode 09): for registration, recalls, and emissions records.
 
 ### SRS / airbag (Toyota/Lexus)
 

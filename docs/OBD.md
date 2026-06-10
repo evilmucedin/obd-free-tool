@@ -112,6 +112,28 @@ year and aren't publicly standardized. Defaults are `7B0`/`7B8`; override with
 `--srs-tx` / `--srs-rx`. Validate on the real vehicle. And per the safety notes
 below, never clear SRS codes before the fault is physically repaired.
 
+## US emissions inspections (I/M readiness)
+
+OBD-II exists in the USA mainly for emissions enforcement, so the inspection-
+relevant data is standardized:
+
+- **Mode 01 PID 01 — Monitor status since DTCs cleared.** 4 bytes (A,B,C,D):
+  - A: bit 7 = MIL ("check engine") commanded on; bits 6-0 = number of confirmed DTCs.
+  - B: continuous monitors — bit 3 selects spark (0) vs compression/diesel (1);
+    bits 0-2 = misfire / fuel-system / comprehensive-components *supported*;
+    bits 4-6 = the same monitors *incomplete* (1 = not ready).
+  - C/D: non-continuous monitors — C = supported bitmask, D = incomplete bitmask
+    (catalyst, heated catalyst, EVAP, secondary air, O2 sensor, O2 heater, EGR,
+    …; the names differ for diesels).
+  A vehicle generally passes a US OBD inspection when the **MIL is off** and at
+  most **one** monitor is "not ready" (two for pre-2000 vehicles) — but exact
+  rules vary by state.
+- **Mode 0A — Permanent DTCs.** Cannot be cleared by a scan tool or battery
+  disconnect; they clear only after the vehicle's own monitors confirm the repair.
+  This blocks "clear codes then drive to the test" cheating, so inspections read them.
+- **Mode 09 PID 02 — VIN.** Used for registration, recall lookups, and emissions
+  records. The response is multi-frame ASCII after a `49 02` marker.
+
 ## Diagnostic Trouble Codes (DTCs)
 
 Mode `03` returns stored codes as 2-byte values decoded into the familiar

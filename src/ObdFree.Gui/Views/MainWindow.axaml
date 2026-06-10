@@ -65,13 +65,18 @@
         </Border>
 
         <!-- Engine / OBD actions -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <WrapPanel.Styles>
+                <Style Selector="Button"><Setter Property="Margin" Value="0,0,8,8"/></Style>
+            </WrapPanel.Styles>
             <Button Content="Status" Command="{Binding StatusCommand}"/>
+            <Button Content="Readiness (smog)" Command="{Binding ReadinessCommand}"/>
+            <Button Content="VIN" Command="{Binding ReadVinCommand}"/>
             <Button Content="Read codes" Command="{Binding ReadCodesCommand}"/>
             <Button Content="Clear codes" Command="{Binding ClearCodesCommand}"/>
             <ProgressBar IsIndeterminate="True" Width="120" VerticalAlignment="Center"
                          IsVisible="{Binding IsBusy}"/>
-        </StackPanel>
+        </WrapPanel>
 
         <!-- SRS / airbag (Toyota/Lexus, experimental) -->
         <Border DockPanel.Dock="Top" BorderBrush="#55cc8800" BorderThickness="1"
