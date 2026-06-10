@@ -74,8 +74,20 @@ obd dtc clear --usb /dev/ttyUSB0 --mode professional   # one-off override
 ```
 
 In the GUI, a **Mode** dropdown (top-right) switches modes and persists the
-choice; dangerous buttons stay disabled in Safe mode. The setting lives in a
-small JSON file under your OS config dir (e.g. `~/.config/obd-free-tool/config.json`).
+choice; dangerous buttons stay disabled in Safe mode.
+
+## Settings are saved automatically
+
+Your settings persist to a small JSON file under your OS config dir (e.g.
+`~/.config/obd-free-tool/config.json`), so the app **resumes with your previous
+choices** after a restart. The GUI saves changes as you make them — operating
+mode, connection kind, target/endpoint, baud rate, vehicle profile, and adapter
+profile. Inspect or tweak it from the CLI:
+
+```bash
+obd config get                     # show all saved settings + file path
+obd config set mode professional   # persist a setting from the CLI
+```
 
 ## Tech stack
 

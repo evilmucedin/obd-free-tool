@@ -24,6 +24,7 @@ namespace ObdFree.Gui.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly ConfigStore _configStore;
+    private readonly bool _loaded;
 
     /// <summary>Creates the view model using the default per-user config store.</summary>
     public MainWindowViewModel()
@@ -32,11 +33,45 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>Creates the view model with a specific config store (used by tests).</summary>
-    /// <param name="configStore">The config store to load/save the operating mode.</param>
+    /// <param name="configStore">The config store that persists all settings.</param>
     public MainWindowViewModel(ConfigStore configStore)
     {
         _configStore = configStore;
-        _selectedMode = configStore.Load().Mode;
+
+        // Restore previously saved settings. Assign backing fields directly so we
+        // don't trigger the change handlers (which would re-save and reset Target).
+        AppConfig config = configStore.Load();
+        _selectedMode = config.Mode;
+        _selectedConnection = config.ConnectionKind;
+        _target = config.Target;
+        _baudRate = config.BaudRate;
+        _selectedProfile = VehicleProfiles.TryGet(config.VehicleProfileKey, out VehicleProfile? v) && v is not null
+            ? v
+            : VehicleProfiles.Generic;
+        _selectedAdapter = AdapterProfiles.TryGet(config.AdapterProfileKey, out AdapterProfile? a) && a is not null
+            ? a
+            : AdapterProfiles.Standard;
+
+        _loaded = true;
+    }
+
+    /// <summary>Persists the current settings to disk (no-op until initial load completes).</summary>
+    private void SaveSettings()
+    {
+        if (!_loaded)
+        {
+            return;
+        }
+
+        _configStore.Save(new AppConfig
+        {
+            Mode = SelectedMode,
+            ConnectionKind = SelectedConnection,
+            Target = Target,
+            BaudRate = BaudRate,
+            VehicleProfileKey = SelectedProfile.Key,
+            AdapterProfileKey = SelectedAdapter.Key,
+        });
     }
 
     [ObservableProperty]
@@ -86,14 +121,20 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Persists the chosen mode so it sticks across launches.</summary>
     partial void OnSelectedModeChanged(OperatingMode value)
     {
-        AppConfig config = _configStore.Load();
-        config.Mode = value;
-        _configStore.Save(config);
+        SaveSettings();
 
         OnPropertyChanged(nameof(CanClearDtc));
         OnPropertyChanged(nameof(CanUseSrs));
         OnPropertyChanged(nameof(CanClearSrs));
     }
+
+    partial void OnTargetChanged(string value) => SaveSettings();
+
+    partial void OnBaudRateChanged(int value) => SaveSettings();
+
+    partial void OnSelectedProfileChanged(VehicleProfile value) => SaveSettings();
+
+    partial void OnSelectedAdapterChanged(AdapterProfile value) => SaveSettings();
 
     partial void OnIsBusyChanged(bool value)
     {
@@ -150,13 +191,17 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>True when SRS access is allowed (professional mode, not busy).</summary>
     public bool CanUseSrs => !IsBusy && IsProfessional;
 
-    partial void OnSelectedConnectionChanged(ConnectionKind value) =>
+    partial void OnSelectedConnectionChanged(ConnectionKind value)
+    {
         Target = value switch
         {
             ConnectionKind.WiFi => $"{TcpObdTransport.DefaultHost}:{TcpObdTransport.DefaultPort}",
             ConnectionKind.Bluetooth => "/dev/rfcomm0",
             _ => "/dev/ttyUSB0",
         };
+
+        SaveSettings();
+    }
 
     /// <summary>Reads adapter status and a live-data snapshot.</summary>
     [RelayCommand(CanExecute = nameof(CanRun))]
