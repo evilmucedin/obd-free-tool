@@ -25,15 +25,27 @@ closed-source black boxes. Your car's diagnostic data belongs to you. This
 project aims to be a clean, well-documented, permissively licensed (Apache-2.0)
 tool that anyone can use, audit, and extend.
 
-## Features (planned)
+Inspired by tools like [ForScan](https://forscan.org/), but free, open-source,
+and cross-platform.
 
-- 🔌 Connect to ELM327-compatible adapters over serial (USB), Bluetooth, and TCP/Wi-Fi.
-- 📊 Read live data (RPM, speed, coolant temp, fuel trim, O2 sensors, …).
-- 🩺 Read & clear Diagnostic Trouble Codes (DTCs) with human-readable descriptions.
-- 🚗 Decode VIN and supported PIDs per vehicle.
+## Features
+
+Available now:
+
+- 🔌 Connect to ELM327-compatible adapters over **USB (serial), Wi-Fi (TCP), and
+  Bluetooth (SPP)**.
+- 📊 `status` — adapter info, battery voltage, and a live-data snapshot
+  (RPM, speed, coolant/intake temp, engine load, throttle).
+- 🩺 `dtc read` — read **stored** (Mode 03) and **pending** (Mode 07) trouble codes.
+- 🧹 `dtc clear` — clear trouble codes from memory (Mode 04), with confirmation.
 - 🧱 Reusable core library (`ObdFree.Core`) with a thin CLI on top.
-- 📝 Log sessions for later analysis (CSV / JSON).
 - 💻 Cross-platform: **Windows, Linux (incl. Ubuntu), and macOS**.
+
+On the roadmap:
+
+- 📈 Continuous live-data streaming and session logging (CSV / JSON).
+- 🚗 VIN decoding and per-vehicle supported-PID discovery.
+- 📷 Freeze-frame data and human-readable DTC descriptions.
 
 ## Tech stack
 
@@ -76,9 +88,28 @@ Or use the cross-platform helper scripts (no flags to memorize):
 See [`scripts/README.md`](scripts/README.md) for all targets and supported
 platforms.
 
-> The CLI is an early scaffold — adapter commands (live data, DTC read/clear)
-> are being built out. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
-> planned design.
+### Talking to an adapter
+
+Connect over USB, Wi-Fi, or Bluetooth and run a command:
+
+```bash
+# Adapter status + live-data snapshot
+dotnet run --project src/ObdFree.Cli -- status --usb /dev/ttyUSB0
+
+# Read stored & pending trouble codes over Wi-Fi (default 192.168.0.10:35000)
+dotnet run --project src/ObdFree.Cli -- dtc read --wifi
+
+# Clear trouble codes from memory over Bluetooth (asks for confirmation)
+dotnet run --project src/ObdFree.Cli -- dtc clear --bluetooth /dev/rfcomm0
+```
+
+Connection flags (pick one): `--usb <port>`, `--wifi [host:port]`,
+`--bluetooth <port>`, plus optional `--baud <rate>` (default 38400). Classic
+Bluetooth ELM327 adapters appear as a serial device, so `--bluetooth` takes the
+serial port the OS bound to the adapter.
+
+> More commands (live streaming, freeze frames, VIN) are on the roadmap. See
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Documentation
 

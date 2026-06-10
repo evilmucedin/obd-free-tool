@@ -1,0 +1,119 @@
+using ObdFree.Core;
+using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Tests.Transport;
+
+namespace ObdFree.Core.Tests;
+
+public class ObdSessionTests
+{
+    private static FakeObdTransport BuildTransport(Dictionary<string, string>? extra = null)
+    {
+        var responses = new Dictionary<string, string>
+        {
+            ["ATZ"] = "ELM327 v1.5\r\r>",
+            ["ATE0"] = "OK\r>",
+            ["ATL0"] = "OK\r>",
+            ["ATS0"] = "OK\r>",
+            ["ATH0"] = "OK\r>",
+            ["ATSP0"] = "OK\r>",
+            ["ATI"] = "ELM327 v1.5\r>",
+            ["ATRV"] = "12.4V\r>",
+        };
+
+        if (extra is not null)
+        {
+            foreach (var kvp in extra)
+            {
+                responses[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return new FakeObdTransport(responses);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_RunsInitSequence_AndReturnsIdentity()
+    {
+        var transport = BuildTransport();
+        await using var session = new ObdSession(transport);
+
+        string identity = await session.ConnectAsync();
+
+        Assert.Equal("ELM327 v1.5", identity);
+        Assert.Equal(
+            ["ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATSP0", "ATI"],
+            transport.SentCommands);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_ReturnsRespondingParameters()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["010C"] = "410C0CE4\r>", // RPM = 825
+            ["010D"] = "410D64\r>",   // speed = 100 km/h
+        });
+        await using var session = new ObdSession(transport);
+
+        ObdStatus status = await session.GetStatusAsync();
+
+        Assert.Equal("ELM327 v1.5", status.AdapterIdentity);
+        Assert.Equal("12.4V", status.BatteryVoltage);
+
+        var byName = status.Readings.ToDictionary(r => r.Definition.Name, r => r.Value);
+        Assert.Equal(825.0, byName["Engine RPM"].Value, precision: 2);
+        Assert.Equal(100.0, byName["Vehicle speed"].Value);
+        Assert.DoesNotContain("Coolant temperature", byName.Keys); // returned NO DATA
+    }
+
+    [Fact]
+    public async Task ReadStoredCodesAsync_ParsesCodes()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["03"] = "4302013304 20\r>",
+        });
+        await using var session = new ObdSession(transport);
+
+        IReadOnlyList<DiagnosticTroubleCode> codes = await session.ReadStoredCodesAsync();
+
+        Assert.Equal(["P0133", "P0420"], codes.Select(c => c.Code));
+    }
+
+    [Fact]
+    public async Task ReadStoredCodesAsync_NoData_ReturnsEmpty()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["03"] = "NO DATA\r>",
+        });
+        await using var session = new ObdSession(transport);
+
+        Assert.Empty(await session.ReadStoredCodesAsync());
+    }
+
+    [Fact]
+    public async Task ClearCodesAsync_PositiveResponse_ReturnsTrue()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["04"] = "44\r>",
+        });
+        await using var session = new ObdSession(transport);
+
+        Assert.True(await session.ClearCodesAsync());
+        Assert.Contains("04", transport.SentCommands);
+    }
+
+    [Fact]
+    public async Task ClearCodesAsync_Error_ReturnsFalse()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["04"] = "CAN ERROR\r>",
+        });
+        await using var session = new ObdSession(transport);
+
+        Assert.False(await session.ClearCodesAsync());
+    }
+}

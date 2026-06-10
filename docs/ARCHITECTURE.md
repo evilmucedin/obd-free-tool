@@ -55,9 +55,14 @@ ObdFree.sln
 ### Transport (`Transport/IObdTransport.cs`)
 Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
 `IAsyncDisposable`. Concrete implementations:
-- **SerialTransport** — USB/serial (e.g. `/dev/ttyUSB0`, `COM3`).
-- **TcpTransport** — Wi-Fi ELM327 adapters (default `192.168.0.10:35000`).
-- **BluetoothTransport** — RFCOMM (platform-dependent; may be phased in later).
+- **SerialObdTransport** — USB/serial (e.g. `/dev/ttyUSB0`, `COM3`). Also serves
+  classic **Bluetooth (SPP)** adapters, which every OS exposes as a serial
+  device (`/dev/rfcomm0`, a COM port, etc.) — so `ObdConnection.Bluetooth(...)`
+  builds a serial transport. This keeps Bluetooth cross-platform with no native
+  deps (the same approach ForScan takes with the BT COM port on Windows).
+- **TcpObdTransport** — Wi-Fi ELM327 adapters (default `192.168.0.10:35000`).
+- **StreamObdTransport** — shared base implementing the ELM327 line protocol
+  (write command + `\r`, read until the `>` prompt) over any `Stream`.
 - **FakeObdTransport** — scripted request/response map for unit tests and
   session replay. **All protocol tests run on this.** (Lives in the test project.)
 
@@ -76,11 +81,15 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   string Unit }` (RPM, speed, coolant temp, load, throttle, …).
 - No I/O; trivial to test with `[Theory]`/`[InlineData]`.
 
-### Session (`Session`, planned)
-The public high-level entry point the CLI/GUI use:
-- `ConnectAsync(IObdTransport)`, negotiate protocol, query supported PIDs.
-- `ReadAsync(pid)`, `StreamAsync({pids...}, callback)`, `ReadDtcsAsync()`,
-  `ClearDtcsAsync()`, `ReadVinAsync()`.
+### Session (`ObdSession`)
+The public high-level entry point the CLI/GUI use (implemented):
+- `ConnectAsync()` — open transport + ELM327 init (`ATZ`, `ATE0`, `ATL0`,
+  `ATS0`, `ATH0`, `ATSP0`), returns adapter identity.
+- `GetStatusAsync()` — adapter identity, battery voltage (`ATRV`), and a snapshot
+  of every catalog parameter that responds.
+- `ReadParameterAsync(def)` — one live PID value.
+- `ReadStoredCodesAsync()` (Mode 03) / `ReadPendingCodesAsync()` (Mode 07).
+- `ClearCodesAsync()` (Mode 04) — write; the CLI gates it behind a confirmation.
 
 ### CLI (`ObdFree.Cli`)
 Thin layer: parse args/flags, build the right transport, drive a session,
