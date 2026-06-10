@@ -12,6 +12,9 @@ public static class DtcParser
     /// <summary>Positive-response byte for Mode 07 (pending DTCs).</summary>
     public const byte PendingResponseByte = 0x47;
 
+    /// <summary>Positive-response byte for Mode 0A (permanent DTCs).</summary>
+    public const byte PermanentResponseByte = 0x4A;
+
     /// <summary>
     /// Parses combined response bytes into trouble codes.
     /// </summary>

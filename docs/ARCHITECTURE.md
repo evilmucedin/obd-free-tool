@@ -24,6 +24,8 @@ ObdFree.sln
 │   ├── Pids/             PID value decoders (PidDecoders, PidCatalog)
 │   ├── Vehicles/         protocol selection + make profiles (Toyota/Lexus)
 │   ├── Adapters/         adapter profiles (timing) + ELM327 compatibility check
+│   ├── Readiness/        I/M readiness monitors + MIL (Mode 01 PID 01)
+│   ├── VehicleInfo/      VIN decoding (Mode 09 PID 02)
 │   └── Uds/              UDS-on-CAN client for SRS/airbag & other modules
 ├── src/ObdFree.Cli       console app (AssemblyName: obd)
 ├── src/ObdFree.Gui       Avalonia desktop app (MVVM)
@@ -99,6 +101,16 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   ISO 15765-4 CAN 11-bit/500k; **Generic** uses auto-detect. `ObdSession` applies
   the profile's protocol during `ConnectAsync`, and the CLI's `--make` /
   `--protocol` flags (with an interactive prompt) select it.
+
+### Readiness (`Readiness/`)
+- `MonitorStatusDecoder` decodes Mode 01 PID 01 (A/B/C/D) into a `MonitorStatus`:
+  MIL state, DTC count, spark-vs-compression, and each emissions monitor's
+  supported/complete flags. `LikelyReadyForInspection` gives a US smog verdict.
+- Pure and exhaustively unit-tested.
+
+### VehicleInfo (`VehicleInfo/`)
+- `VinDecoder` pulls the 17-char VIN out of a (multi-frame) Mode 09 PID 02 reply,
+  collecting printable ASCII after the `49 02` response marker.
 
 ### Adapters (`Adapters/`)
 - `AdapterProfile` + `AdapterProfiles` — per-adapter reset/timing tuning.

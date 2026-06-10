@@ -68,6 +68,8 @@ public class MainWindowViewModelTests
         Assert.NotNull(vm.ClearCodesCommand);
         Assert.NotNull(vm.ReadSrsCommand);
         Assert.NotNull(vm.ClearSrsCommand);
+        Assert.NotNull(vm.ReadinessCommand);
+        Assert.NotNull(vm.ReadVinCommand);
     }
 
     [Fact]

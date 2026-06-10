@@ -137,6 +137,51 @@ public class ObdSessionTests
     }
 
     [Fact]
+    public async Task ReadReadinessAsync_DecodesMilAndMonitors()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            // 41 01 A B C D : A=0x00 (MIL off, 0 DTCs), B=0x07 monitors ready
+            ["0101"] = "410100070000\r>",
+        });
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota);
+
+        var status = await session.ReadReadinessAsync();
+
+        Assert.NotNull(status);
+        Assert.False(status!.MilOn);
+        Assert.Equal(0, status.DtcCount);
+        Assert.True(status.LikelyReadyForInspection);
+    }
+
+    [Fact]
+    public async Task ReadVinAsync_DecodesVin()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            // 49 02 01 + ASCII "1HGCM82633A004352"
+            ["0902"] = "490201314847434D3832363333413030343335320A\r>",
+        });
+        await using var session = new ObdSession(transport);
+
+        Assert.Equal("1HGCM82633A004352", await session.ReadVinAsync());
+    }
+
+    [Fact]
+    public async Task ReadPermanentCodesAsync_ParsesMode0A()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["0A"] = "4A01 0133\r>",
+        });
+        await using var session = new ObdSession(transport);
+
+        var codes = await session.ReadPermanentCodesAsync();
+
+        Assert.Equal(["P0133"], codes.Select(c => c.Code));
+    }
+
+    [Fact]
     public async Task ReadStoredCodesAsync_NoData_ReturnsEmpty()
     {
         var transport = BuildTransport(new Dictionary<string, string>

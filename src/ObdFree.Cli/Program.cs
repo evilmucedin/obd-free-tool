@@ -3,6 +3,7 @@ using ObdFree.Cli;
 using ObdFree.Core;
 using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Readiness;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
 
@@ -46,6 +47,8 @@ try
     int code = command switch
     {
         "status" => await Run(() => RunStatusAsync(session)),
+        "readiness" or "monitors" => await Run(() => RunReadinessAsync(session)),
+        "vin" => await Run(() => RunVinAsync(session)),
         "dtc" when subcommand == "read" => await Run(() => RunDtcReadAsync(session)),
         "dtc" when subcommand == "clear" => await RunDtcClearAsync(session),
         "srs" when subcommand is "status" or "read" or "" => await Run(() => RunSrsReadAsync(session, options.SrsModule)),
@@ -109,10 +112,52 @@ static async Task RunDtcReadAsync(ObdSession session)
     await session.ConnectAsync();
     IReadOnlyList<DiagnosticTroubleCode> stored = await session.ReadStoredCodesAsync();
     IReadOnlyList<DiagnosticTroubleCode> pending = await session.ReadPendingCodesAsync();
+    IReadOnlyList<DiagnosticTroubleCode> permanent = await session.ReadPermanentCodesAsync();
 
     Console.WriteLine();
     PrintCodes("Stored codes (Mode 03)", stored);
     PrintCodes("Pending codes (Mode 07)", pending);
+    PrintCodes("Permanent codes (Mode 0A, cannot be cleared)", permanent);
+}
+
+static async Task RunReadinessAsync(ObdSession session)
+{
+    await session.ConnectAsync();
+    MonitorStatus? status = await session.ReadReadinessAsync();
+
+    Console.WriteLine();
+    if (status is null)
+    {
+        Console.WriteLine("Readiness unavailable (no response to Mode 01 PID 01).");
+        return;
+    }
+
+    Console.WriteLine($"MIL (check engine light): {(status.MilOn ? "ON" : "off")}");
+    Console.WriteLine($"Confirmed DTCs          : {status.DtcCount}");
+    Console.WriteLine($"Engine type             : {(status.IsCompressionIgnition ? "compression (diesel)" : "spark (gasoline)")}");
+    Console.WriteLine();
+    Console.WriteLine("Emissions monitors (I/M readiness):");
+    foreach (MonitorReadiness monitor in status.Monitors)
+    {
+        Console.WriteLine($"  {monitor.Name,-26} {monitor.StatusText}");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine(status.LikelyReadyForInspection
+        ? $"=> Likely READY for a US emissions/smog check ({status.NotReadyCount} monitor(s) not ready, MIL off)."
+        : $"=> Likely NOT ready: MIL {(status.MilOn ? "is ON" : "off")}, {status.NotReadyCount} monitor(s) not ready.");
+    Console.WriteLine("   (Guidance only — exact pass rules vary by state.)");
+}
+
+static async Task RunVinAsync(ObdSession session)
+{
+    await session.ConnectAsync();
+    string? vin = await session.ReadVinAsync();
+
+    Console.WriteLine();
+    Console.WriteLine(vin is null
+        ? "VIN unavailable (no response to Mode 09 PID 02)."
+        : $"VIN: {vin}");
 }
 
 static void PrintCodes(string title, IReadOnlyList<DiagnosticTroubleCode> codes)
@@ -199,7 +244,9 @@ static void PrintUsage(string version)
     Console.WriteLine();
     Console.WriteLine("COMMANDS:");
     Console.WriteLine("  status        Show adapter status and a live-data snapshot");
-    Console.WriteLine("  dtc read      Read stored and pending trouble codes");
+    Console.WriteLine("  readiness     Show MIL + emissions monitors (US smog/I-M readiness)");
+    Console.WriteLine("  vin           Read the Vehicle Identification Number (Mode 09)");
+    Console.WriteLine("  dtc read      Read stored, pending, and permanent trouble codes");
     Console.WriteLine("  dtc clear     Clear trouble codes from memory (asks for confirmation)");
     Console.WriteLine("  srs status    Show SRS/airbag status & codes (Toyota/Lexus, UDS on CAN)");
     Console.WriteLine("  srs clear     Clear SRS/airbag codes (safety warning + confirmation)");
@@ -224,6 +271,8 @@ static void PrintUsage(string version)
     Console.WriteLine();
     Console.WriteLine("EXAMPLES:");
     Console.WriteLine("  obd status --usb /dev/ttyUSB0 --make toyota");
+    Console.WriteLine("  obd readiness --usb /dev/ttyUSB0      # will it pass smog?");
+    Console.WriteLine("  obd vin --wifi");
     Console.WriteLine("  obd dtc read --wifi --make lexus");
     Console.WriteLine("  obd srs status --usb /dev/ttyUSB0 --make toyota");
     Console.WriteLine("  obd srs clear --bluetooth /dev/rfcomm0 --make toyota --srs-tx 7B0 --srs-rx 7B8");

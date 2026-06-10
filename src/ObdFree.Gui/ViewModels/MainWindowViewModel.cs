@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using ObdFree.Core;
 using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
+using ObdFree.Core.Readiness;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
@@ -93,18 +94,56 @@ public partial class MainWindowViewModel : ViewModelBase
         return sb.ToString();
     });
 
-    /// <summary>Reads stored and pending trouble codes.</summary>
+    /// <summary>Reads stored, pending, and permanent trouble codes.</summary>
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task ReadCodesAsync() => RunAsync(async session =>
     {
         await session.ConnectAsync();
         IReadOnlyList<DiagnosticTroubleCode> stored = await session.ReadStoredCodesAsync();
         IReadOnlyList<DiagnosticTroubleCode> pending = await session.ReadPendingCodesAsync();
+        IReadOnlyList<DiagnosticTroubleCode> permanent = await session.ReadPermanentCodesAsync();
 
         var sb = new StringBuilder();
         AppendCodes(sb, "Stored codes (Mode 03)", stored);
         AppendCodes(sb, "Pending codes (Mode 07)", pending);
+        AppendCodes(sb, "Permanent codes (Mode 0A, cannot be cleared)", permanent);
         return sb.ToString();
+    });
+
+    /// <summary>Reads emissions readiness / MIL (US smog check).</summary>
+    [RelayCommand(CanExecute = nameof(CanRun))]
+    private Task ReadinessAsync() => RunAsync(async session =>
+    {
+        MonitorStatus? status = await session.ReadReadinessAsync();
+        if (status is null)
+        {
+            return "Readiness unavailable (no response to Mode 01 PID 01).";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"MIL (check engine light): {(status.MilOn ? "ON" : "off")}");
+        sb.AppendLine($"Confirmed DTCs          : {status.DtcCount}");
+        sb.AppendLine();
+        sb.AppendLine("Emissions monitors (I/M readiness):");
+        foreach (MonitorReadiness monitor in status.Monitors)
+        {
+            sb.AppendLine($"  {monitor.Name,-26} {monitor.StatusText}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine(status.LikelyReadyForInspection
+            ? $"=> Likely READY for a US emissions/smog check ({status.NotReadyCount} not ready, MIL off)."
+            : $"=> Likely NOT ready: MIL {(status.MilOn ? "ON" : "off")}, {status.NotReadyCount} monitor(s) not ready.");
+        sb.AppendLine("   (Guidance only — pass rules vary by state.)");
+        return sb.ToString();
+    });
+
+    /// <summary>Reads the Vehicle Identification Number (VIN).</summary>
+    [RelayCommand(CanExecute = nameof(CanRun))]
+    private Task ReadVinAsync() => RunAsync(async session =>
+    {
+        string? vin = await session.ReadVinAsync();
+        return vin is null ? "VIN unavailable (no response to Mode 09 PID 02)." : $"VIN: {vin}";
     });
 
     /// <summary>Clears stored trouble codes from memory (Mode 04).</summary>
