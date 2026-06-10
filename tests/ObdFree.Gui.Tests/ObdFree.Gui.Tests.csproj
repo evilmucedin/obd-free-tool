@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ObdFree.Gui\ObdFree.Gui.csproj" />
+    <ProjectReference Include="..\..\src\ObdFree.App\ObdFree.App.csproj" />
   </ItemGroup>
 
 </Project>

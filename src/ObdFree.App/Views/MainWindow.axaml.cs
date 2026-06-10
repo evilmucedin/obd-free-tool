@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace ObdFree.Gui.Views;
+namespace ObdFree.App.Views;
 
 public partial class MainWindow : Window
 {

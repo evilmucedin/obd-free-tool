@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace ObdFree.Gui.ViewModels;
+namespace ObdFree.App.ViewModels;
 
 public abstract class ViewModelBase : ObservableObject
 {

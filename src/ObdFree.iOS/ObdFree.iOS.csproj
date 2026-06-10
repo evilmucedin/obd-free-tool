@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    iOS head for the App Store build. Targets net10.0-ios and reuses the shared
+    Avalonia UI in ObdFree.App.
+
+    NOTE: This project is intentionally NOT part of ObdFree.slnx. It can only be
+    built on macOS with Xcode and the .NET iOS workload installed
+    (`dotnet workload install ios`), so keeping it out of the solution lets the
+    cross-platform CI (`dotnet build`/`test` on Linux & Windows) stay green.
+    Build/publish it with scripts/publish-ios.sh.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-ios</TargetFramework>
+    <RootNamespace>ObdFree.iOS</RootNamespace>
+    <SupportedOSPlatformVersion>13.0</SupportedOSPlatformVersion>
+
+    <!-- App Store identity & version (override at publish time as needed). -->
+    <ApplicationId>io.github.evilmucedin.obdfree</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- App head, not a documented library. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CA1305</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.iOS" Version="12.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ObdFree.App\ObdFree.App.csproj" />
+  </ItemGroup>
+
+</Project>

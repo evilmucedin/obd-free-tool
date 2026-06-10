@@ -4,10 +4,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
-using ObdFree.Gui.ViewModels;
-using ObdFree.Gui.Views;
+using ObdFree.App.ViewModels;
+using ObdFree.App.Views;
 
-namespace ObdFree.Gui;
+namespace ObdFree.App;
 
 public partial class App : Application
 {
