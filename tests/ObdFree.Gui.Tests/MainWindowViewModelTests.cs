@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ObdFree.Core.Adapters;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Vehicles;
 using ObdFree.Gui.ViewModels;
@@ -70,6 +71,40 @@ public class MainWindowViewModelTests
         Assert.NotNull(vm.ClearSrsCommand);
         Assert.NotNull(vm.ReadinessCommand);
         Assert.NotNull(vm.ReadVinCommand);
+    }
+
+    [Fact]
+    public void KnownDongles_ExcludeBleAndArePickable()
+    {
+        var vm = new MainWindowViewModel();
+
+        Assert.NotEmpty(vm.KnownDongles);
+        Assert.All(vm.KnownDongles, d => Assert.NotEqual(DongleLink.BluetoothLe, d.Link));
+    }
+
+    [Fact]
+    public void SelectingWiFiDongle_FillsConnectionSettings()
+    {
+        var vm = new MainWindowViewModel();
+        KnownAdapter veepeakWifi = vm.KnownDongles.First(d => d.Key == "veepeak-wifi");
+
+        vm.SelectedDongle = veepeakWifi;
+
+        Assert.Equal(ConnectionKind.WiFi, vm.SelectedConnection);
+        Assert.Equal("192.168.0.10:35000", vm.Target);
+    }
+
+    [Fact]
+    public void SelectingSerialDongle_SetsBaudAndAdapterProfile()
+    {
+        var vm = new MainWindowViewModel();
+        KnownAdapter obdlinkLx = vm.KnownDongles.First(d => d.Key == "obdlink-lx");
+
+        vm.SelectedDongle = obdlinkLx;
+
+        Assert.Equal(ConnectionKind.Bluetooth, vm.SelectedConnection);
+        Assert.Equal(115200, vm.BaudRate);
+        Assert.Equal(AdapterProfiles.Standard, vm.SelectedAdapter);
     }
 
     [Fact]

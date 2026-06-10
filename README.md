@@ -134,6 +134,37 @@ Connection flags (pick one): `--usb <port>`, `--wifi [host:port]`,
 Bluetooth ELM327 adapters appear as a serial device, so `--bluetooth` takes the
 serial port the OS bound to the adapter.
 
+### Supported dongles (popular Amazon models)
+
+The tool works with **any ELM327/STN-compatible adapter** over **USB, Wi-Fi, or
+classic Bluetooth**. For the popular off-the-shelf dongles, `--dongle <key>`
+auto-configures the right endpoint/baud/timing — run `obd dongles` to list them:
+
+```bash
+obd dongles                                       # list known dongles
+obd status --dongle veepeak-wifi                  # Wi-Fi: endpoint auto-set
+obd status --dongle bafx-bt --bluetooth /dev/rfcomm0
+obd status --dongle generic-usb --usb /dev/ttyUSB0
+```
+
+| Dongle | Link | Works today |
+|--------|------|:-----------:|
+| BAFX (Bluetooth) | Bluetooth (classic) | ✅ |
+| Veepeak Mini WiFi / Bluetooth | Wi-Fi / classic BT | ✅ |
+| Vgate iCar Pro (BT 3.0) / WiFi | classic BT / Wi-Fi | ✅ |
+| vLinker FS (USB) / MC+ (BT) | USB / classic BT | ✅ |
+| Panlong, KOBRA (BT / WiFi) | classic BT / Wi-Fi | ✅ |
+| OBDLink LX / MX+ | classic BT (STN) | ✅ |
+| Generic ELM327 (USB / WiFi / BT) | USB / Wi-Fi / classic BT | ✅ |
+| **Veepeak OBDCheck BLE**, **OBDLink CX**, **Vgate iCar Pro BLE** | Bluetooth **LE** | ⏳ not yet |
+
+> **Bluetooth LE (BLE) dongles aren't supported yet.** Several popular models are
+> BLE-only (Veepeak OBDCheck BLE, OBDLink CX, Vgate iCar Pro BLE) — supporting
+> them needs a BLE/GATT transport, which is a tracked follow-up. The classic
+> Bluetooth, USB, and Wi-Fi versions of these brands work today. If you're buying
+> for this tool, a **Wi-Fi** or **classic-Bluetooth** ELM327/STN adapter is the
+> safe choice.
+
 ### Adapters & Launch tools
 
 Pick an adapter profile to tune reset/timing for your dongle:
