@@ -38,7 +38,9 @@ Available now:
   (RPM, speed, coolant/intake temp, engine load, throttle).
 - 🩺 `dtc read` — read **stored** (Mode 03) and **pending** (Mode 07) trouble codes.
 - 🧹 `dtc clear` — clear trouble codes from memory (Mode 04), with confirmation.
-- 🧱 Reusable core library (`ObdFree.Core`) with a thin CLI on top.
+- 🖥️ **Two versions:** a console **CLI** (`ObdFree.Cli`) and a desktop **GUI**
+  (`ObdFree.Gui`, built with [Avalonia](https://avaloniaui.net/)) — both share the
+  same `ObdFree.Core` engine.
 - 💻 Cross-platform: **Windows, Linux (incl. Ubuntu), and macOS**.
 
 On the roadmap:
@@ -58,12 +60,15 @@ On the roadmap:
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-# Build & test
+# Build & test everything (both versions + core + tests)
 dotnet build
 dotnet test
 
-# Run the CLI
+# Run the console CLI
 dotnet run --project src/ObdFree.Cli
+
+# Run the desktop GUI
+dotnet run --project src/ObdFree.Gui
 ```
 
 Or use the cross-platform helper scripts (no flags to memorize):
@@ -73,20 +78,32 @@ Or use the cross-platform helper scripts (no flags to memorize):
 ./scripts/setup-ubuntu.sh
 
 # Linux / macOS
-./scripts/build.sh          # build
-./scripts/test.sh           # test + coverage
-./scripts/run.sh -- --help  # compile and run
-./scripts/publish.sh        # self-contained binary in artifacts/
+./scripts/build.sh              # build everything
+./scripts/test.sh               # test + coverage
+./scripts/run-cli.sh -- --help  # compile and run the CLI
+./scripts/run-gui.sh            # compile and launch the GUI
+./scripts/publish-cli.sh        # self-contained CLI in artifacts/cli/
+./scripts/publish-gui.sh        # self-contained GUI in artifacts/gui/
 
 # Windows (PowerShell)
 ./scripts/build.ps1
 ./scripts/test.ps1
-./scripts/run.ps1 --help
-./scripts/publish.ps1
+./scripts/run-cli.ps1 --help
+./scripts/run-gui.ps1
+./scripts/publish-cli.ps1
+./scripts/publish-gui.ps1
 ```
 
 See [`scripts/README.md`](scripts/README.md) for all targets and supported
 platforms.
+
+### Two versions, one engine
+
+Both apps are thin shells over the shared, well-tested `ObdFree.Core` library:
+
+- **CLI** — scriptable, headless, great for automation and CI.
+- **GUI** — pick your connection and car make from dropdowns, then click
+  **Status**, **Read codes**, or **Clear codes**.
 
 ### Talking to an adapter
 

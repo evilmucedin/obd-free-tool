@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Publish a self-contained, single-file CLI binary for a target platform.
+# Publish a self-contained, single-file console CLI binary for a target platform.
 # (Run on Linux / macOS.)
 #
-# Usage: ./scripts/publish.sh [RID]
+# Usage: ./scripts/publish-cli.sh [RID]
 #   RID is a .NET Runtime Identifier. If omitted, the host platform is detected.
 #   Supported: linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64 win-arm64
 #
@@ -28,7 +28,7 @@ detect_rid() {
 }
 
 RID="${1:-$(detect_rid)}"
-OUT="artifacts/${RID}"
+OUT="artifacts/cli/${RID}"
 
 echo "==> Publishing ObdFree.Cli for ${RID} -> ${OUT}"
 dotnet publish src/ObdFree.Cli \

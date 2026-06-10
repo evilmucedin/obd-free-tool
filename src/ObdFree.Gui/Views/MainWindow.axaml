@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ObdFree.Gui.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="560"
+        x:Class="ObdFree.Gui.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="720" Height="560"
+        Title="obd-free-tool">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <DockPanel Margin="16">
+
+        <TextBlock DockPanel.Dock="Top" Text="obd-free-tool"
+                   FontSize="22" FontWeight="Bold"/>
+        <TextBlock DockPanel.Dock="Top" Text="Free &amp; open-source OBD-II tool"
+                   Opacity="0.7" Margin="0,0,0,12"/>
+
+        <!-- Connection settings -->
+        <Border DockPanel.Dock="Top" BorderBrush="#33888888" BorderThickness="1"
+                CornerRadius="6" Padding="12" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" >
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Connection" VerticalAlignment="Center" Margin="0,0,12,8"/>
+                <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,12,8" HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding ConnectionKinds}"
+                          SelectedItem="{Binding SelectedConnection}"/>
+
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Baud" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <NumericUpDown Grid.Row="0" Grid.Column="3" Width="120" Margin="0,0,0,8"
+                               Minimum="1200" Maximum="500000" Increment="1"
+                               Value="{Binding BaudRate}"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Target" VerticalAlignment="Center" Margin="0,0,12,8"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,8"
+                         PlaceholderText="Serial port (e.g. /dev/ttyUSB0, COM3) or host:port for Wi-Fi"
+                         Text="{Binding Target}"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Car make" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding Profiles}"
+                          SelectedItem="{Binding SelectedProfile}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+        </Border>
+
+        <!-- Actions -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+            <Button Content="Status" Command="{Binding StatusCommand}"/>
+            <Button Content="Read codes" Command="{Binding ReadCodesCommand}"/>
+            <Button Content="Clear codes" Command="{Binding ClearCodesCommand}"/>
+            <ProgressBar IsIndeterminate="True" Width="120" VerticalAlignment="Center"
+                         IsVisible="{Binding IsBusy}"/>
+        </StackPanel>
+
+        <!-- Output -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="6" Padding="4">
+            <ScrollViewer>
+                <TextBox Text="{Binding Output}" IsReadOnly="True" AcceptsReturn="True"
+                         BorderThickness="0" Background="Transparent"
+                         FontFamily="Cascadia Code,Menlo,Consolas,monospace"/>
+            </ScrollViewer>
+        </Border>
+
+    </DockPanel>
+
+</Window>

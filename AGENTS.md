@@ -14,8 +14,10 @@ guidance never drifts.
 over OBD-II. It connects to ELM327-compatible adapters (USB serial, Bluetooth,
 TCP/Wi-Fi), reads live sensor data and Diagnostic Trouble Codes (DTCs), and
 decodes vehicle metadata. The codebase is a reusable .NET core library
-(`ObdFree.Core`) with a thin CLI (`ObdFree.Cli`, produces the `obd` executable)
-on top.
+(`ObdFree.Core`) with **two thin front-ends** on top: a console CLI
+(`ObdFree.Cli`, produces the `obd` executable) and a cross-platform desktop GUI
+(`ObdFree.Gui`, built with Avalonia). All real logic lives in `ObdFree.Core`; the
+front-ends must stay thin and never duplicate it.
 
 ## Non-negotiable principle: free & open forever
 
@@ -31,6 +33,10 @@ auditable.
 - **Runtime:** .NET 10 (`net10.0`), pinned via `global.json`.
 - **Cross-platform:** must build and run on **Windows, Linux (incl. Ubuntu), and
   macOS**. Don't use platform-specific APIs without an abstraction + fallback.
+- **GUI:** [Avalonia](https://avaloniaui.net/) (MIT) with MVVM via
+  `CommunityToolkit.Mvvm`. Chosen over MAUI/WinForms/WPF because it's the only
+  free, open-source toolkit that runs on all three OSes. Keep logic in
+  `ObdFree.Core` and view models thin and testable.
 - **Testing:** xUnit + `coverlet` for coverage. **Heavy test coverage is a
   first-class requirement** — new logic ships with tests.
 - **CI/CD:** GitHub Actions (`.github/workflows/`). We lean on GitHub
@@ -48,9 +54,11 @@ auditable.
 ├── .editorconfig                # formatting & analyzer style rules
 ├── src/
 │   ├── ObdFree.Core/            # core library: transports, protocol, decoding
-│   └── ObdFree.Cli/             # CLI executable (AssemblyName: obd)
+│   ├── ObdFree.Cli/             # console CLI (AssemblyName: obd)
+│   └── ObdFree.Gui/             # Avalonia desktop GUI (MVVM)
 ├── tests/
-│   └── ObdFree.Core.Tests/      # xUnit tests (incl. FakeObdTransport)
+│   ├── ObdFree.Core.Tests/      # xUnit tests (incl. FakeObdTransport)
+│   └── ObdFree.Gui.Tests/       # xUnit tests for the GUI view models
 ├── .github/workflows/ci.yml     # build + test matrix + format check
 ├── scripts/                     # cross-platform build/test/run/publish helpers
 └── docs/                        # human + agent documentation
@@ -72,10 +80,11 @@ dotnet run --project src/ObdFree.Cli        # run the CLI
 ```
 
 Cross-platform helper scripts live in `scripts/` (`*.sh` for Linux/macOS,
-`*.ps1` for Windows): `build`, `test`, `run` (compile + run), and `publish`
-(self-contained single-file binary per RID into `artifacts/`). On Ubuntu/Debian,
-`setup-ubuntu.sh` installs the .NET SDK and adapter packages via `apt`. See
-[`scripts/README.md`](scripts/README.md).
+`*.ps1` for Windows): `build`, `test`, `run-cli` / `run-gui` (compile + run each
+version), and `publish-cli` / `publish-gui` (self-contained single-file binary
+per RID into `artifacts/cli/` and `artifacts/gui/`). On Ubuntu/Debian,
+`setup-ubuntu.sh` installs the .NET SDK, adapter packages, and Avalonia GUI
+runtime libraries via `apt`. See [`scripts/README.md`](scripts/README.md).
 
 ## Conventions
 

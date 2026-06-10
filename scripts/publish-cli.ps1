@@ -1,8 +1,8 @@
 #!/usr/bin/env pwsh
-# Publish a self-contained, single-file CLI binary for a target platform.
+# Publish a self-contained, single-file console CLI binary for a target platform.
 # (Run on Windows or any cross-platform PowerShell host.)
 #
-# Usage: ./scripts/publish.ps1 [-Rid <rid>]
+# Usage: ./scripts/publish-cli.ps1 [-Rid <rid>]
 #   Rid is a .NET Runtime Identifier. If omitted, the host platform is detected.
 #   Supported: win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64
 #
@@ -25,7 +25,7 @@ if (-not $Rid) {
     $Rid = "$os-$arch"
 }
 
-$out = "artifacts/$Rid"
+$out = "artifacts/cli/$Rid"
 
 Write-Host "==> Publishing ObdFree.Cli for $Rid -> $out"
 dotnet publish src/ObdFree.Cli `

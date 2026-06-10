@@ -20,11 +20,18 @@ ObdFree.sln
 ├── src/ObdFree.Core      class library — all the logic
 │   ├── Transport/        IObdTransport + serial/tcp/bluetooth impls
 │   ├── Protocol/         ELM327 command/response, OBD modes & PIDs
-│   ├── Diagnostics/      DTC decoding (DiagnosticTroubleCode)
-│   └── Pids/             PID value decoders (PidDecoders, PidValue)
+│   ├── Diagnostics/      DTC decoding (DiagnosticTroubleCode, DtcParser)
+│   ├── Pids/             PID value decoders (PidDecoders, PidCatalog)
+│   └── Vehicles/         protocol selection + make profiles (Toyota/Lexus)
 ├── src/ObdFree.Cli       console app (AssemblyName: obd)
-└── tests/ObdFree.Core.Tests   xUnit tests + FakeObdTransport
+├── src/ObdFree.Gui       Avalonia desktop app (MVVM)
+├── tests/ObdFree.Core.Tests   xUnit tests + FakeObdTransport
+└── tests/ObdFree.Gui.Tests    xUnit tests for the GUI view models
 ```
+
+Both front-ends are deliberately thin: the CLI parses args and prints text; the
+GUI binds controls to a view model. Neither contains OBD logic — they both drive
+`ObdSession` from `ObdFree.Core`, so behavior stays consistent and testable.
 
 ## Layered overview
 
@@ -104,6 +111,13 @@ The public high-level entry point the CLI/GUI use (implemented):
 ### CLI (`ObdFree.Cli`)
 Thin layer: parse args/flags, build the right transport, drive a session,
 format output (human table, CSV, JSON), handle logging.
+
+### GUI (`ObdFree.Gui`)
+Avalonia (MVVM) desktop app. `MainWindowViewModel` exposes the connection kind,
+target, baud, and car-make selections plus `Status` / `ReadCodes` / `ClearCodes`
+relay commands — each builds an `ObdConnection` and drives an `ObdSession`
+exactly like the CLI. The view models are unit-tested in `ObdFree.Gui.Tests`
+without needing a display.
 
 ## Data flow (reading live RPM)
 

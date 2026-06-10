@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>ObdFree.Gui</RootNamespace>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- This is an application, not a documented library; skip XML-doc warnings. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- UI display strings intentionally format for the user's current culture. -->
+    <NoWarn>$(NoWarn);CA1305</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ObdFree.Core\ObdFree.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -2,8 +2,10 @@
   <Folder Name="/src/">
     <Project Path="src/ObdFree.Cli/ObdFree.Cli.csproj" />
     <Project Path="src/ObdFree.Core/ObdFree.Core.csproj" />
+    <Project Path="src/ObdFree.Gui/ObdFree.Gui.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ObdFree.Core.Tests/ObdFree.Core.Tests.csproj" />
+    <Project Path="tests/ObdFree.Gui.Tests/ObdFree.Gui.Tests.csproj" />
   </Folder>
 </Solution>
