@@ -10,6 +10,14 @@ or paywalls.
 > Status: 🚧 **Early development.** APIs, CLI flags, and on-disk formats are not
 > yet stable.
 
+## Our promise: free forever, open forever
+
+`obd-free-tool` is and will **always be free and open-source** — no
+subscriptions, no accounts, no ads, no paywalled "pro" tier, no telemetry. Your
+car's diagnostic data is yours. The Apache-2.0 license guarantees anyone can
+use, audit, fork, and build on this tool, forever. That principle drives every
+decision in this project.
+
 ## Why
 
 Most OBD apps are either locked behind subscriptions, riddled with ads, or
@@ -45,6 +53,25 @@ dotnet test
 # Run the CLI
 dotnet run --project src/ObdFree.Cli
 ```
+
+Or use the cross-platform helper scripts (no flags to memorize):
+
+```bash
+# Linux / macOS
+./scripts/build.sh          # build
+./scripts/test.sh           # test + coverage
+./scripts/run.sh -- --help  # compile and run
+./scripts/publish.sh        # self-contained binary in artifacts/
+
+# Windows (PowerShell)
+./scripts/build.ps1
+./scripts/test.ps1
+./scripts/run.ps1 --help
+./scripts/publish.ps1
+```
+
+See [`scripts/README.md`](scripts/README.md) for all targets and supported
+platforms.
 
 > The CLI is an early scaffold — adapter commands (live data, DTC read/clear)
 > are being built out. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the

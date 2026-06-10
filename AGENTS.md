@@ -17,6 +17,14 @@ decodes vehicle metadata. The codebase is a reusable .NET core library
 (`ObdFree.Core`) with a thin CLI (`ObdFree.Cli`, produces the `obd` executable)
 on top.
 
+## Non-negotiable principle: free & open forever
+
+This tool is, and will **always remain, free and open-source** (Apache-2.0). No
+subscriptions, accounts, ads, paywalled features, or telemetry — ever. Do not
+add dependencies, services, or features that would compromise this. When in
+doubt, choose the option that keeps the tool free, offline-capable, and
+auditable.
+
 ## Tech stack
 
 - **Language:** C# (latest language version).
@@ -44,6 +52,7 @@ on top.
 ├── tests/
 │   └── ObdFree.Core.Tests/      # xUnit tests (incl. FakeObdTransport)
 ├── .github/workflows/ci.yml     # build + test matrix + format check
+├── scripts/                     # cross-platform build/test/run/publish helpers
 └── docs/                        # human + agent documentation
 ```
 
@@ -61,6 +70,11 @@ dotnet format                               # apply formatting
 dotnet format --verify-no-changes           # CI formatting gate
 dotnet run --project src/ObdFree.Cli        # run the CLI
 ```
+
+Cross-platform helper scripts live in `scripts/` (`*.sh` for Linux/macOS,
+`*.ps1` for Windows): `build`, `test`, `run` (compile + run), and `publish`
+(self-contained single-file binary per RID into `artifacts/`). See
+[`scripts/README.md`](scripts/README.md).
 
 ## Conventions
 
