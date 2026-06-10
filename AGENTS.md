@@ -73,7 +73,8 @@ dotnet run --project src/ObdFree.Cli        # run the CLI
 
 Cross-platform helper scripts live in `scripts/` (`*.sh` for Linux/macOS,
 `*.ps1` for Windows): `build`, `test`, `run` (compile + run), and `publish`
-(self-contained single-file binary per RID into `artifacts/`). See
+(self-contained single-file binary per RID into `artifacts/`). On Ubuntu/Debian,
+`setup-ubuntu.sh` installs the .NET SDK and adapter packages via `apt`. See
 [`scripts/README.md`](scripts/README.md).
 
 ## Conventions

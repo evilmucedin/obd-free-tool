@@ -19,6 +19,13 @@ Requirements:
   in `global.json`).
 - Any editor — Visual Studio, VS Code (C# Dev Kit), or Rider all work.
 
+**On Ubuntu/Debian** you can install everything (the .NET SDK and adapter
+packages) via apt in one step:
+
+```bash
+./scripts/setup-ubuntu.sh
+```
+
 ```bash
 # Clone
 git clone https://github.com/evilmucedin/obd-free-tool.git

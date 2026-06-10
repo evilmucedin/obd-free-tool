@@ -57,6 +57,9 @@ dotnet run --project src/ObdFree.Cli
 Or use the cross-platform helper scripts (no flags to memorize):
 
 ```bash
+# Ubuntu/Debian: one-time setup (installs the .NET SDK & deps via apt)
+./scripts/setup-ubuntu.sh
+
 # Linux / macOS
 ./scripts/build.sh          # build
 ./scripts/test.sh           # test + coverage

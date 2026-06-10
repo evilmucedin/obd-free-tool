@@ -10,10 +10,30 @@ All scripts can be run from anywhere; they resolve the repo root themselves.
 
 | Task | Linux / macOS | Windows |
 |------|---------------|---------|
+| One-time setup (Ubuntu/Debian) | `./scripts/setup-ubuntu.sh` | — |
 | Build the solution | `./scripts/build.sh [Debug\|Release]` | `./scripts/build.ps1 [-Configuration Release]` |
 | Run tests + coverage | `./scripts/test.sh [Debug\|Release]` | `./scripts/test.ps1 [-Configuration Release]` |
 | Compile **and** run the CLI | `./scripts/run.sh -- <args>` | `./scripts/run.ps1 <args>` |
 | Publish a native binary | `./scripts/publish.sh [RID]` | `./scripts/publish.ps1 [-Rid <rid>]` |
+
+## First-time setup on Ubuntu / Debian
+
+`setup-ubuntu.sh` installs everything via `apt` so a clean machine is ready to
+build:
+
+- base prerequisites (`curl`, `git`, `ca-certificates`, …),
+- the **.NET 10 SDK** (`dotnet-sdk-10.0`; falls back to the Microsoft package
+  feed if the distro repo doesn't carry it),
+- OBD adapter support (`usbutils`, `udev`, `bluez`, `libbluetooth-dev`), and
+- adds you to the `dialout` group for USB serial access (`/dev/ttyUSB*`).
+
+```bash
+./scripts/setup-ubuntu.sh
+# then log out/in once for serial-port group access to take effect
+```
+
+It's idempotent — safe to re-run. macOS users install the .NET SDK via the
+official installer or Homebrew; Windows users via winget or the .NET installer.
 
 ## Examples
 
