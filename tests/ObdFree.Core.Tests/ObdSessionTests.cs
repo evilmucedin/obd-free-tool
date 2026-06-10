@@ -1,4 +1,5 @@
 using ObdFree.Core;
+using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Tests.Transport;
 using ObdFree.Core.Vehicles;
@@ -69,6 +70,35 @@ public class ObdSessionTests
 
         Assert.Equal(VehicleProfiles.Generic, session.Profile);
         Assert.Contains("ATSP0", transport.SentCommands);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_UsesAdapterResetCommand()
+    {
+        var transport = BuildTransport();
+        // Custom Launch-like profile with no delays so the test stays fast.
+        var adapter = new AdapterProfile("test", "Test", "ATWS", 0, 0, "");
+        await using var session = new ObdSession(transport, VehicleProfiles.Toyota, adapter);
+
+        await session.ConnectAsync();
+
+        Assert.Equal("ATWS", transport.SentCommands[0]);
+        Assert.DoesNotContain("ATZ", transport.SentCommands);
+        Assert.True(session.AdapterLooksElmCompatible);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_FlagsNonElmDevice()
+    {
+        var transport = BuildTransport(new Dictionary<string, string>
+        {
+            ["ATI"] = "DBSCAR\r>", // proprietary Launch-style response
+        });
+        await using var session = new ObdSession(transport);
+
+        await session.ConnectAsync();
+
+        Assert.False(session.AdapterLooksElmCompatible);
     }
 
     [Fact]

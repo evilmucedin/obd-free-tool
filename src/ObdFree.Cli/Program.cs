@@ -1,6 +1,7 @@
 using System.Reflection;
 using ObdFree.Cli;
 using ObdFree.Core;
+using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
@@ -35,36 +36,44 @@ if (options is null)
 
 Console.WriteLine($"obd-free-tool {version}");
 Console.WriteLine($"Vehicle    : {options.Profile.DisplayName}");
+Console.WriteLine($"Adapter    : {options.Adapter.DisplayName}");
 Console.WriteLine($"Connecting via {options.Connection}...");
 
 try
 {
-    await using var session = new ObdSession(options.Connection.CreateTransport(), options.Profile);
+    await using var session = new ObdSession(options.Connection.CreateTransport(), options.Profile, options.Adapter);
 
-    switch (command)
+    int code = command switch
     {
-        case "status":
-            await RunStatusAsync(session);
-            return 0;
+        "status" => await Run(() => RunStatusAsync(session)),
+        "dtc" when subcommand == "read" => await Run(() => RunDtcReadAsync(session)),
+        "dtc" when subcommand == "clear" => await RunDtcClearAsync(session),
+        "srs" when subcommand is "status" or "read" or "" => await Run(() => RunSrsReadAsync(session, options.SrsModule)),
+        "srs" when subcommand == "clear" => await RunSrsClearAsync(session, options.SrsModule),
+        _ => Unknown(command, subcommand, version),
+    };
 
-        case "dtc" when subcommand == "read":
-            await RunDtcReadAsync(session);
-            return 0;
+    // If the device never answered ATI like an ELM327, it is most likely a
+    // proprietary dongle (e.g. Launch DBSCAR). Make that explicit.
+    if (session.AdapterIdentity is not null && !session.AdapterLooksElmCompatible)
+    {
+        Console.WriteLine();
+        Console.WriteLine("WARNING: " + AdapterCompatibility.ProprietaryAdapterHint);
+    }
 
-        case "dtc" when subcommand == "clear":
-            return await RunDtcClearAsync(session);
+    return code;
 
-        case "srs" when subcommand is "status" or "read" or "":
-            await RunSrsReadAsync(session, options.SrsModule);
-            return 0;
+    static async Task<int> Run(Func<Task> action)
+    {
+        await action();
+        return 0;
+    }
 
-        case "srs" when subcommand == "clear":
-            return await RunSrsClearAsync(session, options.SrsModule);
-
-        default:
-            Console.Error.WriteLine($"Unknown command: '{command} {subcommand}'.");
-            PrintUsage(version);
-            return 2;
+    static int Unknown(string command, string subcommand, string version)
+    {
+        Console.Error.WriteLine($"Unknown command: '{command} {subcommand}'.");
+        PrintUsage(version);
+        return 2;
     }
 }
 catch (Exception ex) when (ex is IOException or InvalidOperationException or TimeoutException or System.Net.Sockets.SocketException)
@@ -204,6 +213,10 @@ static void PrintUsage(string version)
     Console.WriteLine("VEHICLE (optional — improves protocol selection):");
     Console.WriteLine("  --make <make>       Car make: generic, toyota, lexus (prompts if omitted)");
     Console.WriteLine("  --protocol <proto>  Force a protocol: auto, can, can29, iso9141, kwp");
+    Console.WriteLine();
+    Console.WriteLine("ADAPTER (optional):");
+    Console.WriteLine("  --adapter <kind>    standard (default) or launch (tolerant clone/Launch timing)");
+    Console.WriteLine("                      Note: proprietary Launch DBSCAR dongles are NOT supported.");
     Console.WriteLine();
     Console.WriteLine("SRS (Toyota/Lexus, experimental — addresses vary by model):");
     Console.WriteLine("  --srs-tx <hex>      Override SRS request CAN header (default 7B0)");

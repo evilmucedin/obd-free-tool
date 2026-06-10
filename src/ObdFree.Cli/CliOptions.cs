@@ -1,14 +1,20 @@
+using ObdFree.Core.Adapters;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Cli;
 
-/// <summary>The fully-resolved options for a command: how to connect, the vehicle profile, and the SRS module.</summary>
+/// <summary>The fully-resolved options for a command.</summary>
 /// <param name="Connection">The adapter connection.</param>
 /// <param name="Profile">The vehicle profile (protocol tuning).</param>
+/// <param name="Adapter">The adapter profile (reset/timing tuning).</param>
 /// <param name="SrsModule">The SRS module addressing (with any header overrides applied).</param>
-internal sealed record CliOptions(ObdConnection Connection, VehicleProfile Profile, EcuModule SrsModule);
+internal sealed record CliOptions(
+    ObdConnection Connection,
+    VehicleProfile Profile,
+    AdapterProfile Adapter,
+    EcuModule SrsModule);
 
 /// <summary>
 /// Parses the flags shared by every command: connection (<c>--usb</c>,
@@ -26,6 +32,7 @@ internal static class CliOptionsParser
         int baud = 38400;
         string? makeKey = null;
         string? protocolText = null;
+        string? adapterKey = null;
         string? srsTx = null;
         string? srsRx = null;
 
@@ -61,6 +68,9 @@ internal static class CliOptionsParser
                 case "--protocol":
                     protocolText = NextValue(args, ref i);
                     break;
+                case "--adapter":
+                    adapterKey = NextValue(args, ref i);
+                    break;
                 case "--srs-tx":
                     srsTx = NextValue(args, ref i);
                     break;
@@ -91,6 +101,18 @@ internal static class CliOptionsParser
             return null;
         }
 
+        AdapterProfile adapter = AdapterProfiles.Standard;
+        if (!string.IsNullOrWhiteSpace(adapterKey))
+        {
+            if (!AdapterProfiles.TryGet(adapterKey, out AdapterProfile? found) || found is null)
+            {
+                error = $"Unknown --adapter '{adapterKey}'. Known: {string.Join(", ", AdapterProfiles.All.Select(a => a.Key))}.";
+                return null;
+            }
+
+            adapter = found;
+        }
+
         ObdConnection connection = kind switch
         {
             ConnectionKind.Usb => ObdConnection.Usb(target, baud),
@@ -100,7 +122,7 @@ internal static class CliOptionsParser
 
         EcuModule srsModule = ToyotaModules.Srs.WithHeaders(srsTx, srsRx);
 
-        return new CliOptions(connection, profile, srsModule);
+        return new CliOptions(connection, profile, adapter, srsModule);
     }
 
     /// <summary>
