@@ -25,15 +25,27 @@ closed-source black boxes. Your car's diagnostic data belongs to you. This
 project aims to be a clean, well-documented, permissively licensed (Apache-2.0)
 tool that anyone can use, audit, and extend.
 
-## Features (planned)
+Inspired by tools like [ForScan](https://forscan.org/), but free, open-source,
+and cross-platform.
 
-- 🔌 Connect to ELM327-compatible adapters over serial (USB), Bluetooth, and TCP/Wi-Fi.
-- 📊 Read live data (RPM, speed, coolant temp, fuel trim, O2 sensors, …).
-- 🩺 Read & clear Diagnostic Trouble Codes (DTCs) with human-readable descriptions.
-- 🚗 Decode VIN and supported PIDs per vehicle.
+## Features
+
+Available now:
+
+- 🔌 Connect to ELM327-compatible adapters over **USB (serial), Wi-Fi (TCP), and
+  Bluetooth (SPP)**.
+- 📊 `status` — adapter info, battery voltage, and a live-data snapshot
+  (RPM, speed, coolant/intake temp, engine load, throttle).
+- 🩺 `dtc read` — read **stored** (Mode 03) and **pending** (Mode 07) trouble codes.
+- 🧹 `dtc clear` — clear trouble codes from memory (Mode 04), with confirmation.
 - 🧱 Reusable core library (`ObdFree.Core`) with a thin CLI on top.
-- 📝 Log sessions for later analysis (CSV / JSON).
 - 💻 Cross-platform: **Windows, Linux (incl. Ubuntu), and macOS**.
+
+On the roadmap:
+
+- 📈 Continuous live-data streaming and session logging (CSV / JSON).
+- 🚗 VIN decoding and per-vehicle supported-PID discovery.
+- 📷 Freeze-frame data and human-readable DTC descriptions.
 
 ## Tech stack
 
@@ -76,9 +88,42 @@ Or use the cross-platform helper scripts (no flags to memorize):
 See [`scripts/README.md`](scripts/README.md) for all targets and supported
 platforms.
 
-> The CLI is an early scaffold — adapter commands (live data, DTC read/clear)
-> are being built out. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
-> planned design.
+### Talking to an adapter
+
+Connect over USB, Wi-Fi, or Bluetooth and run a command:
+
+```bash
+# Adapter status + live-data snapshot (Toyota/Lexus)
+dotnet run --project src/ObdFree.Cli -- status --usb /dev/ttyUSB0 --make toyota
+
+# Read stored & pending trouble codes over Wi-Fi (default 192.168.0.10:35000)
+dotnet run --project src/ObdFree.Cli -- dtc read --wifi --make lexus
+
+# Clear trouble codes from memory over Bluetooth (asks for confirmation)
+dotnet run --project src/ObdFree.Cli -- dtc clear --bluetooth /dev/rfcomm0 --make toyota
+```
+
+Connection flags (pick one): `--usb <port>`, `--wifi [host:port]`,
+`--bluetooth <port>`, plus optional `--baud <rate>` (default 38400). Classic
+Bluetooth ELM327 adapters appear as a serial device, so `--bluetooth` takes the
+serial port the OS bound to the adapter.
+
+### Vehicle profiles (Toyota / Lexus)
+
+Picking your car make selects the right OBD protocol up front, which connects
+faster and more reliably than auto-detection:
+
+- `--make toyota` / `--make lexus` → ISO 15765-4 CAN (11-bit, 500k), used by most
+  Toyota/Lexus from ~2008+.
+- `--make generic` (default) → adapter auto-detects the protocol.
+- If you omit `--make`, the CLI asks you to pick interactively.
+- Override the protocol for older cars with `--protocol auto|can|iso9141|kwp`.
+
+> Toyota/Lexus is the initial test target. If you hit issues on a specific
+> model, please open an issue with the model year and adapter type.
+
+> More commands (live streaming, freeze frames, VIN) are on the roadmap. See
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Documentation
 
