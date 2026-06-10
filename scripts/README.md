@@ -6,25 +6,37 @@ Every task ships in two flavors:
 - `*.sh` — POSIX shell, for **Linux** and **macOS**.
 - `*.ps1` — PowerShell, for **Windows** (and any cross-platform `pwsh` host).
 
+The app comes in **two versions** that share the same `ObdFree.Core` engine:
+
+- **CLI** (`ObdFree.Cli`) — the `obd` console tool.
+- **GUI** (`ObdFree.Gui`) — an Avalonia desktop app.
+
 All scripts can be run from anywhere; they resolve the repo root themselves.
 
 | Task | Linux / macOS | Windows |
 |------|---------------|---------|
 | One-time setup (Ubuntu/Debian) | `./scripts/setup-ubuntu.sh` | — |
-| Build the solution | `./scripts/build.sh [Debug\|Release]` | `./scripts/build.ps1 [-Configuration Release]` |
+| Build everything | `./scripts/build.sh [Debug\|Release]` | `./scripts/build.ps1 [-Configuration Release]` |
 | Run tests + coverage | `./scripts/test.sh [Debug\|Release]` | `./scripts/test.ps1 [-Configuration Release]` |
-| Compile **and** run the CLI | `./scripts/run.sh -- <args>` | `./scripts/run.ps1 <args>` |
-| Publish a native binary | `./scripts/publish.sh [RID]` | `./scripts/publish.ps1 [-Rid <rid>]` |
+| Run the **CLI** | `./scripts/run-cli.sh -- <args>` | `./scripts/run-cli.ps1 <args>` |
+| Run the **GUI** | `./scripts/run-gui.sh` | `./scripts/run-gui.ps1` |
+| Publish the **CLI** | `./scripts/publish-cli.sh [RID]` | `./scripts/publish-cli.ps1 [-Rid <rid>]` |
+| Publish the **GUI** | `./scripts/publish-gui.sh [RID]` | `./scripts/publish-gui.ps1 [-Rid <rid>]` |
+
+`build.sh` and `test.sh` cover the whole solution (both apps + the core library
+and tests), so there's a single build/test step for everything.
 
 ## First-time setup on Ubuntu / Debian
 
 `setup-ubuntu.sh` installs everything via `apt` so a clean machine is ready to
-build:
+build and run **both** versions:
 
 - base prerequisites (`curl`, `git`, `ca-certificates`, …),
 - the **.NET 10 SDK** (`dotnet-sdk-10.0`; falls back to the Microsoft package
   feed if the distro repo doesn't carry it),
-- OBD adapter support (`usbutils`, `udev`, `bluez`, `libbluetooth-dev`), and
+- OBD adapter support (`usbutils`, `udev`, `bluez`, `libbluetooth-dev`),
+- GUI runtime libraries for Avalonia (`libx11-6`, `libfontconfig1`, `libgl1`, …),
+  needed only to *run* the desktop app, and
 - adds you to the `dialout` group for USB serial access (`/dev/ttyUSB*`).
 
 ```bash
@@ -38,23 +50,30 @@ official installer or Homebrew; Windows users via winget or the .NET installer.
 ## Examples
 
 ```bash
-# Build, test, and launch the CLI (Linux/macOS)
+# Linux / macOS
 ./scripts/build.sh
 ./scripts/test.sh
-./scripts/run.sh -- --help
+./scripts/run-cli.sh -- status --usb /dev/ttyUSB0 --make toyota
+./scripts/run-gui.sh
+./scripts/publish-cli.sh        # self-contained CLI in artifacts/cli/<rid>/
+./scripts/publish-gui.sh        # self-contained GUI in artifacts/gui/<rid>/
 ```
 
 ```powershell
-# Same, on Windows
+# Windows (PowerShell)
 ./scripts/build.ps1
 ./scripts/test.ps1
-./scripts/run.ps1 --help
+./scripts/run-cli.ps1 status --usb COM3 --make lexus
+./scripts/run-gui.ps1
+./scripts/publish-cli.ps1
+./scripts/publish-gui.ps1
 ```
 
 ## Publishing self-contained binaries
 
-`publish.sh` / `publish.ps1` produce a **self-contained, single-file** executable
-(no .NET install required on the target machine) under `artifacts/<RID>/`.
+`publish-cli` / `publish-gui` produce a **self-contained, single-file**
+executable (no .NET install required on the target machine) under
+`artifacts/cli/<RID>/` and `artifacts/gui/<RID>/` respectively.
 
 If no Runtime Identifier (RID) is given, the host platform is auto-detected.
 Supported RIDs:
@@ -69,11 +88,11 @@ Supported RIDs:
 | macOS Apple Silicon | `osx-arm64` |
 
 ```bash
-# Cross-compile a Windows binary from Linux/macOS
-./scripts/publish.sh win-x64
+# Cross-compile a Windows GUI from Linux/macOS
+./scripts/publish-gui.sh win-x64
 # Auto-detect the current platform
-./scripts/publish.sh
+./scripts/publish-cli.sh
 ```
 
-> The CLI is free and open-source forever — these binaries are too. Ship them
-> anywhere.
+> Both versions are free and open-source forever — these binaries are too. Ship
+> them anywhere.

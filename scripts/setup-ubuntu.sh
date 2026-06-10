@@ -44,6 +44,17 @@ $SUDO apt-get install -y --no-install-recommends \
     bluez \
     libbluetooth-dev || echo "WARN: some optional adapter packages were unavailable; continuing."
 
+# Runtime libraries the Avalonia desktop GUI needs on Linux (X11, fonts, GL).
+# Only required to *run* the GUI; the CLI needs none of these.
+echo "==> Installing GUI (Avalonia) runtime libraries..."
+$SUDO apt-get install -y --no-install-recommends \
+    libx11-6 \
+    libice6 \
+    libsm6 \
+    libfontconfig1 \
+    libgl1 \
+    libicu-dev || echo "WARN: some GUI runtime libraries were unavailable; the CLI will still work."
+
 install_dotnet_from_microsoft_feed() {
     echo "==> Falling back to Microsoft package feed for the .NET SDK..."
     # shellcheck disable=SC1091
@@ -84,4 +95,5 @@ echo ""
 echo "==> Setup complete. Next steps:"
 echo "      ./scripts/build.sh"
 echo "      ./scripts/test.sh"
-echo "      ./scripts/run.sh -- --help"
+echo "      ./scripts/run-cli.sh -- --help   # console version"
+echo "      ./scripts/run-gui.sh             # desktop GUI version"
