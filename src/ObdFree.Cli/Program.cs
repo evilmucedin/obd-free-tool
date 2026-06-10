@@ -274,8 +274,13 @@ static int RunConfig(string[] args)
 
     if (args.Length == 0 || args[0] is "get" or "show")
     {
-        Console.WriteLine($"Mode: {config.Mode}");
-        Console.WriteLine($"File: {store.Path}");
+        Console.WriteLine($"Mode       : {config.Mode}");
+        Console.WriteLine($"Connection : {config.ConnectionKind}");
+        Console.WriteLine($"Target     : {config.Target}");
+        Console.WriteLine($"Baud       : {config.BaudRate}");
+        Console.WriteLine($"Vehicle    : {config.VehicleProfileKey}");
+        Console.WriteLine($"Adapter    : {config.AdapterProfileKey}");
+        Console.WriteLine($"File       : {store.Path}");
         return 0;
     }
 

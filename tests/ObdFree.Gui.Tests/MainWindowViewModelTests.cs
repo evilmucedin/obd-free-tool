@@ -54,9 +54,58 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void ChangingSettings_PersistsThem()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"obd-gui-cfg-{Guid.NewGuid():N}.json");
+        var vm = new MainWindowViewModel(new ConfigStore(path));
+
+        vm.SelectedConnection = ConnectionKind.WiFi;
+        vm.Target = "10.0.0.5:35000";
+        vm.BaudRate = 115200;
+        vm.SelectedProfile = VehicleProfiles.Toyota;
+        vm.SelectedAdapter = AdapterProfiles.Launch;
+
+        AppConfig saved = new ConfigStore(path).Load();
+        Assert.Equal(ConnectionKind.WiFi, saved.ConnectionKind);
+        Assert.Equal("10.0.0.5:35000", saved.Target);
+        Assert.Equal(115200, saved.BaudRate);
+        Assert.Equal("toyota", saved.VehicleProfileKey);
+        Assert.Equal("launch", saved.AdapterProfileKey);
+        File.Delete(path);
+    }
+
+    [Fact]
+    public void Restart_RestoresSavedSettings()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"obd-gui-cfg-{Guid.NewGuid():N}.json");
+        new ConfigStore(path).Save(new AppConfig
+        {
+            Mode = OperatingMode.Professional,
+            ConnectionKind = ConnectionKind.Bluetooth,
+            Target = "/dev/rfcomm9",
+            BaudRate = 115200,
+            VehicleProfileKey = "lexus",
+            AdapterProfileKey = "launch",
+        });
+
+        // Simulate a fresh launch with the same config file.
+        var vm = new MainWindowViewModel(new ConfigStore(path));
+
+        Assert.Equal(OperatingMode.Professional, vm.SelectedMode);
+        Assert.Equal(ConnectionKind.Bluetooth, vm.SelectedConnection);
+        Assert.Equal("/dev/rfcomm9", vm.Target);
+        Assert.Equal(115200, vm.BaudRate);
+        Assert.Equal("lexus", vm.SelectedProfile.Key);
+        Assert.Equal("launch", vm.SelectedAdapter.Key);
+        File.Delete(path);
+    }
+
+    [Fact]
     public void Defaults_AreUsbGenericAndReady()
     {
-        var vm = new MainWindowViewModel();
+        // Fresh temp store with no file -> loads built-in defaults.
+        string path = Path.Combine(Path.GetTempPath(), $"obd-gui-cfg-{Guid.NewGuid():N}.json");
+        var vm = new MainWindowViewModel(new ConfigStore(path));
 
         Assert.Equal(ConnectionKind.Usb, vm.SelectedConnection);
         Assert.Equal("/dev/ttyUSB0", vm.Target);
@@ -67,7 +116,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void Lists_ExposeConnectionKindsProfilesAndAdapters()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm();
 
         Assert.Contains(ConnectionKind.WiFi, vm.ConnectionKinds);
         Assert.Contains(vm.Profiles, p => p.Key == "toyota");
@@ -83,10 +132,8 @@ public class MainWindowViewModelTests
     [InlineData(ConnectionKind.Usb, "/dev/ttyUSB0")]
     public void ChangingConnection_UpdatesDefaultTarget(ConnectionKind kind, string expectedTarget)
     {
-        var vm = new MainWindowViewModel
-        {
-            SelectedConnection = kind,
-        };
+        var vm = CreateVm();
+        vm.SelectedConnection = kind;
 
         Assert.Equal(expectedTarget, vm.Target);
     }
@@ -94,7 +141,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void IsBusy_RaisesCanRunChange()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm();
         var changed = new List<string?>();
         ((INotifyPropertyChanged)vm).PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
@@ -107,7 +154,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void Commands_AreWiredUp()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm();
 
         Assert.NotNull(vm.StatusCommand);
         Assert.NotNull(vm.ReadCodesCommand);
@@ -121,7 +168,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void KnownDongles_ExcludeBleAndArePickable()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm();
 
         Assert.NotEmpty(vm.KnownDongles);
         Assert.All(vm.KnownDongles, d => Assert.NotEqual(DongleLink.BluetoothLe, d.Link));
@@ -130,7 +177,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SelectingWiFiDongle_FillsConnectionSettings()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm();
         KnownAdapter veepeakWifi = vm.KnownDongles.First(d => d.Key == "veepeak-wifi");
 
         vm.SelectedDongle = veepeakWifi;
@@ -142,7 +189,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SelectingSerialDongle_SetsBaudAndAdapterProfile()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateVm();
         KnownAdapter obdlinkLx = vm.KnownDongles.First(d => d.Key == "obdlink-lx");
 
         vm.SelectedDongle = obdlinkLx;

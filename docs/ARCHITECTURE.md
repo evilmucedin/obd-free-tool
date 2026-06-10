@@ -112,9 +112,13 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
 - **Enforced in the core:** `ObdSession` calls `EnsureAllowed(feature)` and throws
   `FeatureNotAllowedInModeException` if disallowed — so the UI can't bypass it.
   CLI/GUI also pre-check `ModePolicy` for friendly messaging and to gate controls.
-- `AppConfig` + `ConfigStore` persist the chosen mode as JSON under the OS config
-  dir (`ConfigStore` takes an explicit path in tests, so they never touch the
-  real user config).
+- `AppConfig` + `ConfigStore` persist **all** user settings (operating mode,
+  connection kind, target, baud, vehicle profile key, adapter profile key) as
+  JSON under the OS config dir, so the app resumes with the previous choices on
+  restart. The GUI restores settings into backing fields on construction (no
+  save side-effects) and writes the whole config whenever a setting changes;
+  `ConfigStore` takes an explicit path in tests, so they never touch the real
+  user config.
 
 ### Readiness (`Readiness/`)
 - `MonitorStatusDecoder` decodes Mode 01 PID 01 (A/B/C/D) into a `MonitorStatus`:
