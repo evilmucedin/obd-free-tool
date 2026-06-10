@@ -127,6 +127,26 @@ Connection flags (pick one): `--usb <port>`, `--wifi [host:port]`,
 Bluetooth ELM327 adapters appear as a serial device, so `--bluetooth` takes the
 serial port the OS bound to the adapter.
 
+### Adapters & Launch tools
+
+Pick an adapter profile to tune reset/timing for your dongle:
+
+- `--adapter standard` (default) — genuine ELM327, STN/OBDLink, well-behaved clones.
+- `--adapter launch` — tolerant timing (warm-start reset + delays) for finicky
+  clones and **ELM327-compatible Launch Wi-Fi/BT units**.
+
+> **About Launch dongles — read this.** The popular cheap Launch devices
+> (**Thinkdiag, Easydiag, Golo, X431/DBSCAR**) are **not** ELM327 — they use
+> Launch's **proprietary DBSCAR protocol** and are locked to Launch's own apps,
+> so no generic OBD tool (this one included) can drive them. If you connect one,
+> the app **detects it and tells you** instead of failing silently. Only
+> **ELM327-compatible** adapters work here — including ELM327-style Launch Wi-Fi
+> units (use `--adapter launch`). For full third-party compatibility, an OBDLink,
+> vLinker, or Vgate adapter is a safe bet.
+>
+> Note: Bluetooth support is currently **classic SPP** (serial). BLE-only dongles
+> aren't supported yet.
+
 ### Vehicle profiles (Toyota / Lexus)
 
 Picking your car make selects the right OBD protocol up front, which connects

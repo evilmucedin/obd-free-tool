@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ObdFree.Core;
+using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Transport;
 using ObdFree.Core.Uds;
@@ -32,6 +33,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private VehicleProfile _selectedProfile = VehicleProfiles.Generic;
 
     [ObservableProperty]
+    private AdapterProfile _selectedAdapter = AdapterProfiles.Standard;
+
+    [ObservableProperty]
     private string _output = "Ready. Pick a connection and a car make, then choose an action.";
 
     [ObservableProperty]
@@ -43,6 +47,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>The vehicle profiles offered in the UI.</summary>
     public IReadOnlyList<VehicleProfile> Profiles { get; } = [.. VehicleProfiles.All];
+
+    /// <summary>The adapter profiles offered in the UI.</summary>
+    public IReadOnlyList<AdapterProfile> Adapters { get; } = [.. AdapterProfiles.All];
 
     /// <summary>True when an action can run (not already busy).</summary>
     public bool CanRun => !IsBusy;
@@ -168,8 +175,16 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             ObdConnection connection = BuildConnection();
-            await using var session = new ObdSession(connection.CreateTransport(), SelectedProfile);
-            Output = await action(session);
+            await using var session = new ObdSession(connection.CreateTransport(), SelectedProfile, SelectedAdapter);
+            string result = await action(session);
+
+            // Flag proprietary (non-ELM327) dongles such as Launch DBSCAR.
+            if (session.AdapterIdentity is not null && !session.AdapterLooksElmCompatible)
+            {
+                result += "\n\nWARNING: " + AdapterCompatibility.ProprietaryAdapterHint;
+            }
+
+            Output = result;
         }
         catch (System.Exception ex)
         {

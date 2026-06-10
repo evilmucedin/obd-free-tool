@@ -23,6 +23,7 @@ ObdFree.sln
 │   ├── Diagnostics/      DTC decoding (DiagnosticTroubleCode, DtcParser)
 │   ├── Pids/             PID value decoders (PidDecoders, PidCatalog)
 │   ├── Vehicles/         protocol selection + make profiles (Toyota/Lexus)
+│   ├── Adapters/         adapter profiles (timing) + ELM327 compatibility check
 │   └── Uds/              UDS-on-CAN client for SRS/airbag & other modules
 ├── src/ObdFree.Cli       console app (AssemblyName: obd)
 ├── src/ObdFree.Gui       Avalonia desktop app (MVVM)
@@ -98,6 +99,16 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   ISO 15765-4 CAN 11-bit/500k; **Generic** uses auto-detect. `ObdSession` applies
   the profile's protocol during `ConnectAsync`, and the CLI's `--make` /
   `--protocol` flags (with an interactive prompt) select it.
+
+### Adapters (`Adapters/`)
+- `AdapterProfile` + `AdapterProfiles` — per-adapter reset/timing tuning.
+  `Standard` (ATZ, no delays) and `Launch` (ATWS warm start + conservative delays
+  for finicky clones and ELM327-compatible Launch Wi-Fi/BT units). `ObdSession`
+  applies the reset command and inter-command delays during `ConnectAsync`.
+- `AdapterCompatibility.IsLikelyElm` — inspects the `ATI` identity to decide if
+  the device is really ELM327. Proprietary dongles (e.g. **Launch DBSCAR /
+  Thinkdiag**, which aren't ELM327 and can't be driven by generic tools) fail
+  this check, and both UIs surface a clear hint instead of failing silently.
 
 ### Uds (`Uds/`)
 UDS (ISO 14229) over CAN for **non-OBD modules** like SRS/airbag, which generic

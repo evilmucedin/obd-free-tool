@@ -1,3 +1,4 @@
+using ObdFree.Core.Adapters;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Pids;
 using ObdFree.Core.Protocol;
@@ -38,12 +39,28 @@ public sealed record ObdStatus(
 /// ELM327 adapter, then reads status / live data and reads or clears Diagnostic
 /// Trouble Codes — the core ForScan-style workflow.
 /// </summary>
-public sealed class ObdSession(IObdTransport transport, VehicleProfile? profile = null) : IAsyncDisposable
+public sealed class ObdSession(
+    IObdTransport transport,
+    VehicleProfile? profile = null,
+    AdapterProfile? adapter = null) : IAsyncDisposable
 {
     private readonly IObdTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
 
     /// <summary>Gets the vehicle profile guiding this session (defaults to generic).</summary>
     public VehicleProfile Profile { get; } = profile ?? VehicleProfiles.Generic;
+
+    /// <summary>Gets the adapter profile (reset/timing tuning; defaults to standard).</summary>
+    public AdapterProfile Adapter { get; } = adapter ?? AdapterProfiles.Standard;
+
+    /// <summary>Gets the adapter identity from the last <see cref="ConnectAsync"/>, if any.</summary>
+    public string? AdapterIdentity { get; private set; }
+
+    /// <summary>
+    /// Gets whether the connected device looks like an ELM327-compatible adapter.
+    /// <see langword="false"/> typically means a proprietary dongle (e.g. Launch
+    /// DBSCAR) that this tool cannot drive.
+    /// </summary>
+    public bool AdapterLooksElmCompatible => AdapterCompatibility.IsLikelyElm(AdapterIdentity);
 
     private async Task EnsureOpenAsync(CancellationToken cancellationToken)
     {
@@ -53,10 +70,21 @@ public sealed class ObdSession(IObdTransport transport, VehicleProfile? profile 
         }
     }
 
+    private async Task<string> InitStepAsync(string command, CancellationToken cancellationToken)
+    {
+        string response = await _transport.SendCommandAsync(command, cancellationToken).ConfigureAwait(false);
+        if (Adapter.InterCommandDelayMs > 0)
+        {
+            await Task.Delay(Adapter.InterCommandDelayMs, cancellationToken).ConfigureAwait(false);
+        }
+
+        return response;
+    }
+
     /// <summary>
-    /// Opens the transport and runs the ELM327 initialization sequence
-    /// (reset, echo/linefeed/spaces off, then sets the profile's preferred
-    /// protocol — auto for generic, ISO 15765-4 CAN for Toyota/Lexus).
+    /// Opens the transport and runs the ELM327 initialization sequence (reset
+    /// per the adapter profile, echo/linefeed/spaces/headers off, then sets the
+    /// vehicle profile's preferred protocol). Records the adapter identity.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The adapter identity reported by <c>ATI</c>.</returns>
@@ -64,22 +92,28 @@ public sealed class ObdSession(IObdTransport transport, VehicleProfile? profile 
     {
         await EnsureOpenAsync(cancellationToken).ConfigureAwait(false);
 
-        await _transport.SendCommandAsync("ATZ", cancellationToken).ConfigureAwait(false);   // reset
-        await _transport.SendCommandAsync("ATE0", cancellationToken).ConfigureAwait(false);  // echo off
-        await _transport.SendCommandAsync("ATL0", cancellationToken).ConfigureAwait(false);  // linefeeds off
-        await _transport.SendCommandAsync("ATS0", cancellationToken).ConfigureAwait(false);  // spaces off
-        await _transport.SendCommandAsync("ATH0", cancellationToken).ConfigureAwait(false);  // headers off
+        // Reset (ATZ or ATWS), with an optional settle delay for finicky adapters.
+        await _transport.SendCommandAsync(Adapter.ResetCommand, cancellationToken).ConfigureAwait(false);
+        if (Adapter.ResetDelayMs > 0)
+        {
+            await Task.Delay(Adapter.ResetDelayMs, cancellationToken).ConfigureAwait(false);
+        }
+
+        await InitStepAsync("ATE0", cancellationToken).ConfigureAwait(false);  // echo off
+        await InitStepAsync("ATL0", cancellationToken).ConfigureAwait(false);  // linefeeds off
+        await InitStepAsync("ATS0", cancellationToken).ConfigureAwait(false);  // spaces off
+        await InitStepAsync("ATH0", cancellationToken).ConfigureAwait(false);  // headers off
 
         // Set the protocol for this vehicle (ATSP0 = auto, ATSP6 = CAN 11/500, …).
-        await _transport.SendCommandAsync(Profile.PreferredProtocol.ToSetProtocolCommand(), cancellationToken)
-            .ConfigureAwait(false);
+        await InitStepAsync(Profile.PreferredProtocol.ToSetProtocolCommand(), cancellationToken).ConfigureAwait(false);
 
         string identity = (await _transport.SendCommandAsync("ATI", cancellationToken).ConfigureAwait(false))
             .Replace("\r", " ", StringComparison.Ordinal)
             .Replace(">", string.Empty, StringComparison.Ordinal)
             .Trim();
 
-        return string.IsNullOrWhiteSpace(identity) ? "ELM327 (unknown)" : identity;
+        AdapterIdentity = string.IsNullOrWhiteSpace(identity) ? null : identity;
+        return AdapterIdentity ?? "Unknown device (no ATI response)";
     }
 
     /// <summary>Reads the adapter's measured battery voltage (<c>ATRV</c>).</summary>

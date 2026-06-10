@@ -111,6 +111,10 @@ runtime libraries via `apt`. See [`scripts/README.md`](scripts/README.md).
 - **Non-OBD modules (SRS, ABS, …):** live in `Uds/` and use UDS-over-CAN with
   make-specific CAN addresses. Treat addresses as configurable/experimental
   (defaults + overrides), and keep parsing tolerant of ISO-TP multi-frame output.
+- **Adapters:** only ELM327-compatible adapters are supported. Proprietary
+  dongles (e.g. Launch DBSCAR / Thinkdiag) are **not** ELM327 — don't pretend to
+  support them; detect them (`AdapterCompatibility`) and tell the user. Adapter
+  timing quirks belong in `AdapterProfile`, not scattered through the code.
 
 ## Workflow expectations for agents
 

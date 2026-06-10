@@ -19,13 +19,16 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void Lists_ExposeConnectionKindsAndProfiles()
+    public void Lists_ExposeConnectionKindsProfilesAndAdapters()
     {
         var vm = new MainWindowViewModel();
 
         Assert.Contains(ConnectionKind.WiFi, vm.ConnectionKinds);
         Assert.Contains(vm.Profiles, p => p.Key == "toyota");
         Assert.Contains(vm.Profiles, p => p.Key == "lexus");
+        Assert.Contains(vm.Adapters, a => a.Key == "standard");
+        Assert.Contains(vm.Adapters, a => a.Key == "launch");
+        Assert.Equal("standard", vm.SelectedAdapter.Key);
     }
 
     [Theory]
