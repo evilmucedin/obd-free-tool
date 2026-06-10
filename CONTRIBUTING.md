@@ -15,33 +15,37 @@ free forever — contributions of all sizes are welcome.
 
 Requirements:
 
-- A C++20 compiler (Clang 16+, GCC 13+, or MSVC 2022+).
-- CMake >= 3.25.
-- [vcpkg](https://vcpkg.io) (used in manifest mode; the CMake preset wires it up).
-- `clang-format` for formatting.
+- The [.NET 10 SDK](https://dotnet.microsoft.com/download) (the version is pinned
+  in `global.json`).
+- Any editor — Visual Studio, VS Code (C# Dev Kit), or Rider all work.
 
 ```bash
 # Clone
 git clone https://github.com/evilmucedin/obd-free-tool.git
 cd obd-free-tool
 
-# Configure, build, test
-cmake --preset default
-cmake --build --preset default
-ctest --preset default --output-on-failure
+# Build, test, run
+dotnet build
+dotnet test
+dotnet run --project src/ObdFree.Cli
 ```
 
-> If these presets don't exist yet, the build is still being scaffolded — follow
-> the structure in `AGENTS.md` and `docs/ARCHITECTURE.md` when adding them.
+The project builds and runs on **Windows, Linux (incl. Ubuntu), and macOS**.
 
 ## Making changes
 
 1. Create a branch: `git checkout -b feature/short-description`.
 2. Keep changes small and focused — one concern per PR.
-3. Add or update tests. Hardware-touching code must be tested via
-   `MockTransport`; nothing in CI may require a physical adapter.
+3. Add or update tests. We care a lot about coverage — new logic ships with
+   tests. Hardware-touching code must be tested via `FakeObdTransport`; nothing
+   in CI may require a physical adapter.
 4. Update docs in the same PR when you change layout, commands, or conventions.
-5. Format your code: `clang-format -i $(git ls-files '*.cpp' '*.h' '*.hpp')`.
+5. Before pushing, make sure all three pass (CI enforces them on every OS):
+   ```bash
+   dotnet build
+   dotnet test
+   dotnet format --verify-no-changes
+   ```
 
 ## Commit & PR guidelines
 

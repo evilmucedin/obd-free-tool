@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ObdFree.Cli</RootNamespace>
+    <AssemblyName>obd</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ObdFree.Core\ObdFree.Core.csproj" />
+  </ItemGroup>
+
+</Project>

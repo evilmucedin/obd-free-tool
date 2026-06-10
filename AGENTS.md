@@ -13,31 +13,38 @@ guidance never drifts.
 `obd-free-tool` is an open-source, free-forever tool to communicate with cars
 over OBD-II. It connects to ELM327-compatible adapters (USB serial, Bluetooth,
 TCP/Wi-Fi), reads live sensor data and Diagnostic Trouble Codes (DTCs), and
-decodes vehicle metadata. The codebase is a reusable C++ core library
-(`libobd`) with a thin CLI (`obd-cli`) on top.
+decodes vehicle metadata. The codebase is a reusable .NET core library
+(`ObdFree.Core`) with a thin CLI (`ObdFree.Cli`, produces the `obd` executable)
+on top.
 
 ## Tech stack
 
-- **Language:** C++20.
-- **Build:** CMake (>= 3.25) with presets (`CMakePresets.json`).
-- **Dependencies:** [vcpkg](https://vcpkg.io) in manifest mode (`vcpkg.json`).
-- **Testing:** CTest + a unit-test framework (GoogleTest or Catch2 — see the
-  build files once they land).
-- **Target platforms:** Linux and macOS first; Windows best-effort.
+- **Language:** C# (latest language version).
+- **Runtime:** .NET 10 (`net10.0`), pinned via `global.json`.
+- **Cross-platform:** must build and run on **Windows, Linux (incl. Ubuntu), and
+  macOS**. Don't use platform-specific APIs without an abstraction + fallback.
+- **Testing:** xUnit + `coverlet` for coverage. **Heavy test coverage is a
+  first-class requirement** — new logic ships with tests.
+- **CI/CD:** GitHub Actions (`.github/workflows/`). We lean on GitHub
+  infrastructure as much as possible (Actions, artifacts, releases, Dependabot).
+- **Quality gates:** warnings-as-errors, .NET analyzers, and `dotnet format` are
+  enforced in the build and in CI.
 
-## Repository layout (target)
+## Repository layout
 
 ```
 .
-├── CMakeLists.txt          # top-level build
-├── CMakePresets.json       # configure/build/test presets
-├── vcpkg.json              # dependency manifest
+├── ObdFree.sln                  # solution
+├── global.json                  # pins the .NET SDK
+├── Directory.Build.props        # shared MSBuild settings for all projects
+├── .editorconfig                # formatting & analyzer style rules
 ├── src/
-│   ├── libobd/             # core library: transports, protocol, PID decoding
-│   └── cli/                # obd-cli executable
-├── include/obd/            # public headers for libobd
-├── tests/                  # unit & integration tests
-└── docs/                   # human + agent documentation
+│   ├── ObdFree.Core/            # core library: transports, protocol, decoding
+│   └── ObdFree.Cli/             # CLI executable (AssemblyName: obd)
+├── tests/
+│   └── ObdFree.Core.Tests/      # xUnit tests (incl. FakeObdTransport)
+├── .github/workflows/ci.yml     # build + test matrix + format check
+└── docs/                        # human + agent documentation
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module responsibilities
@@ -46,53 +53,51 @@ and data flow, and [`docs/OBD.md`](docs/OBD.md) for the OBD-II domain primer.
 ## Build & test commands
 
 ```bash
-# Configure (pulls deps via vcpkg)
-cmake --preset default
-
-# Build
-cmake --build --preset default
-
-# Run tests
-ctest --preset default --output-on-failure
-
-# Format (run before committing)
-clang-format -i $(git ls-files '*.cpp' '*.h' '*.hpp')
+dotnet restore                              # restore dependencies
+dotnet build                                # build (warnings are errors)
+dotnet test                                 # run all tests
+dotnet test --collect:"XPlat Code Coverage" # tests + coverage
+dotnet format                               # apply formatting
+dotnet format --verify-no-changes           # CI formatting gate
+dotnet run --project src/ObdFree.Cli        # run the CLI
 ```
-
-> If a preset or file referenced above does not exist yet, the project is still
-> being scaffolded — create it following the conventions in this document rather
-> than inventing a different structure.
 
 ## Conventions
 
-- **C++ style:** follow `.clang-format` (to be added; default to LLVM style with
-  4-space indent until then). Prefer RAII, `std::expected`/`Result`-style error
-  handling over exceptions across API boundaries, and `std::span`/`string_view`
-  for non-owning views.
-- **Headers:** public API in `include/obd/`, implementation details stay in
-  `src/`. Use `#pragma once`.
-- **Naming:** `PascalCase` for types, `camelCase` for functions/methods,
-  `snake_case` for variables and files, `kPascalCase` for constants.
-- **Errors:** never `abort()` or leak adapter handles on error paths. Surface
-  transport/protocol failures as typed errors.
-- **No hardware in CI:** anything touching a real adapter must sit behind an
-  abstraction (`Transport` interface) so it can be mocked. Unit tests must not
+- **Style:** enforced by `.editorconfig` and analyzers. File-scoped namespaces,
+  braces always, `System` usings first, 4-space indent (2 for XML/YAML/JSON).
+- **Nullable reference types** are enabled everywhere — honor them, no `!` to
+  paper over warnings.
+- **Naming:** `PascalCase` for types/methods/properties, `camelCase` for locals
+  and parameters, `_camelCase` for private fields, `PascalCase` for constants.
+- **Async:** suffix async methods with `Async`, accept a
+  `CancellationToken` (default it), don't block on `.Result`/`.Wait()`.
+- **XML docs:** public members in `ObdFree.Core` are documented
+  (`GenerateDocumentationFile` is on; missing docs fail the build). Test projects
+  are exempt.
+- **No hardware in CI/tests:** anything touching a real adapter sits behind the
+  `IObdTransport` abstraction. Tests use `FakeObdTransport`; they must never
   require a physical device.
-- **Safety:** code that writes to the vehicle (clearing DTCs, mode 08 tests)
-  must be explicit, opt-in, and clearly logged. Never make write operations the
-  default.
+- **Pure where possible:** decoders (PID/DTC) are pure functions — easy to test
+  exhaustively with `[Theory]`/`[InlineData]`.
+- **Safety:** code that writes to the vehicle (clearing DTCs, mode 04/08) must be
+  explicit, opt-in, and clearly logged. Never make write operations the default.
 
 ## Workflow expectations for agents
 
 1. **Read before writing.** Skim `docs/ARCHITECTURE.md` and `docs/OBD.md` before
    changing core logic.
 2. **Small, focused changes.** One concern per PR/commit.
-3. **Keep docs in sync.** If you change the module layout, build commands, or
+3. **Tests alongside code.** New behavior needs tests; transports get faked.
+   Aim to keep coverage high — don't merge logic without tests.
+4. **Green build locally.** Run `dotnet build`, `dotnet test`, and
+   `dotnet format --verify-no-changes` before pushing — CI runs all three on
+   Windows, Linux, and macOS.
+5. **Keep docs in sync.** If you change the module layout, build commands, or
    conventions, update this file and the relevant `docs/` page in the same change.
-4. **Tests alongside code.** New behavior needs tests; transports get mocked.
-5. **Commit messages:** imperative mood, concise subject (`Add ELM327 serial
+6. **Commit messages:** imperative mood, concise subject (`Add ELM327 serial
    transport`), body explains *why* when it isn't obvious.
-6. **Don't commit secrets or device-specific paths.** Use config/flags.
+7. **Don't commit secrets or device-specific paths.** Use config/flags.
 
 ## Good first reading order
 

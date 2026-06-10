@@ -5,11 +5,12 @@ guidance in **[`../AGENTS.md`](../AGENTS.md)**.
 
 When generating or reviewing code here, follow `AGENTS.md` for:
 
-- Tech stack (C++20, CMake + vcpkg, CTest).
-- Repository layout (`src/libobd`, `src/cli`, `include/obd`, `tests`).
-- Coding conventions (naming, error handling, header layout, formatting).
+- Tech stack (C# / .NET 10, xUnit, GitHub Actions; cross-platform Windows/Linux/macOS).
+- Repository layout (`src/ObdFree.Core`, `src/ObdFree.Cli`, `tests/ObdFree.Core.Tests`).
+- Coding conventions (file-scoped namespaces, nullable enabled, naming, async, `.editorconfig`).
+- Testing: heavy coverage is required; new logic ships with xUnit tests.
 - Safety rules (vehicle-write operations are explicit and opt-in; no real
-  hardware required for tests — use the `Transport` abstraction).
+  hardware in tests — use the `IObdTransport` abstraction / `FakeObdTransport`).
 
 Other useful docs: [`../README.md`](../README.md),
 [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md),

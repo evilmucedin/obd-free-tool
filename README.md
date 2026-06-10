@@ -23,26 +23,32 @@ tool that anyone can use, audit, and extend.
 - 📊 Read live data (RPM, speed, coolant temp, fuel trim, O2 sensors, …).
 - 🩺 Read & clear Diagnostic Trouble Codes (DTCs) with human-readable descriptions.
 - 🚗 Decode VIN and supported PIDs per vehicle.
-- 🧱 Reusable core library (`libobd`) with a thin CLI on top.
+- 🧱 Reusable core library (`ObdFree.Core`) with a thin CLI on top.
 - 📝 Log sessions for later analysis (CSV / JSON).
+- 💻 Cross-platform: **Windows, Linux (incl. Ubuntu), and macOS**.
+
+## Tech stack
+
+- **C# / .NET 10** — one codebase, runs everywhere.
+- **xUnit** for tests (we care a lot about coverage).
+- **GitHub Actions** for CI across all three operating systems.
 
 ## Quick start
 
-> These commands assume the tooling described in
-> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). They will work once the first
-> build lands.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-# Configure & build (CMake + vcpkg)
-cmake --preset default
-cmake --build --preset default
+# Build & test
+dotnet build
+dotnet test
 
-# Run against a USB adapter
-./build/obd-cli --port /dev/ttyUSB0 live rpm speed coolant_temp
-
-# Read trouble codes
-./build/obd-cli --port /dev/ttyUSB0 dtc read
+# Run the CLI
+dotnet run --project src/ObdFree.Cli
 ```
+
+> The CLI is an early scaffold — adapter commands (live data, DTC read/clear)
+> are being built out. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
+> planned design.
 
 ## Documentation
 
