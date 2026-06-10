@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using ObdFree.Core;
 using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Transport;
+using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Gui.ViewModels;
@@ -46,7 +47,11 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>True when an action can run (not already busy).</summary>
     public bool CanRun => !IsBusy;
 
-    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanRun));
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanRun));
+        OnPropertyChanged(nameof(CanClearSrs));
+    }
 
     partial void OnSelectedConnectionChanged(ConnectionKind value) =>
         Target = value switch
@@ -105,6 +110,51 @@ public partial class MainWindowViewModel : ViewModelBase
             ? "Trouble codes cleared. The MIL ('check engine' light) should turn off."
             : "Clear was not acknowledged by the ECU.";
     });
+
+    /// <summary>Reads SRS/airbag status and codes (Toyota/Lexus, UDS over CAN).</summary>
+    [RelayCommand(CanExecute = nameof(CanRun))]
+    private Task ReadSrsAsync() => RunAsync(async session =>
+    {
+        ModuleStatus status = await session.ReadModuleStatusAsync(ToyotaModules.Srs);
+        var sb = new StringBuilder();
+        sb.AppendLine($"SRS / Airbag status: {status.Summary}");
+        sb.AppendLine($"(module {status.Module.RequestHeader}/{status.Module.ResponseHeader})");
+        sb.AppendLine();
+        if (status.HasFaults)
+        {
+            foreach (UdsDtc code in status.Codes)
+            {
+                sb.AppendLine($"  {code}{(code.IsActive ? "  (active)" : string.Empty)}");
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Note: SRS addressing is make-specific and experimental.");
+        return sb.ToString();
+    });
+
+    /// <summary>Clears SRS/airbag codes after the user confirms the safety warning.</summary>
+    [RelayCommand(CanExecute = nameof(CanClearSrs))]
+    private Task ClearSrsAsync() => RunAsync(async session =>
+    {
+        bool ok = await session.ClearModuleCodesAsync(ToyotaModules.Srs);
+        SrsClearConfirmed = false;
+        return ok
+            ? "SRS codes cleared. If the airbag warning light stays on, the fault is still present."
+            : "Clear was not acknowledged by the SRS module.";
+    });
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the user has acknowledged the SRS
+    /// safety warning. The Clear SRS button stays disabled until this is set.
+    /// </summary>
+    [ObservableProperty]
+    private bool _srsClearConfirmed;
+
+    /// <summary>True when SRS clearing is allowed (not busy and the warning is acknowledged).</summary>
+    public bool CanClearSrs => !IsBusy && SrsClearConfirmed;
+
+    partial void OnSrsClearConfirmedChanged(bool value) => OnPropertyChanged(nameof(CanClearSrs));
 
     private async Task RunAsync(System.Func<ObdSession, Task<string>> action)
     {

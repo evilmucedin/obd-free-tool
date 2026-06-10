@@ -53,14 +53,30 @@
             </Grid>
         </Border>
 
-        <!-- Actions -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+        <!-- Engine / OBD actions -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <Button Content="Status" Command="{Binding StatusCommand}"/>
             <Button Content="Read codes" Command="{Binding ReadCodesCommand}"/>
             <Button Content="Clear codes" Command="{Binding ClearCodesCommand}"/>
             <ProgressBar IsIndeterminate="True" Width="120" VerticalAlignment="Center"
                          IsVisible="{Binding IsBusy}"/>
         </StackPanel>
+
+        <!-- SRS / airbag (Toyota/Lexus, experimental) -->
+        <Border DockPanel.Dock="Top" BorderBrush="#55cc8800" BorderThickness="1"
+                CornerRadius="6" Padding="10" Margin="0,0,0,12">
+            <StackPanel Spacing="6">
+                <TextBlock Text="SRS / Airbag (Toyota/Lexus — experimental)" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Read SRS" Command="{Binding ReadSrsCommand}"/>
+                    <Button Content="Clear SRS" Command="{Binding ClearSrsCommand}"/>
+                    <CheckBox Content="I understand: only clear after the fault is repaired"
+                              IsChecked="{Binding SrsClearConfirmed}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock TextWrapping="Wrap" Opacity="0.7"
+                           Text="Clearing SRS codes does not fix the fault. A faulty airbag system may not deploy in a crash."/>
+            </StackPanel>
+        </Border>
 
         <!-- Output -->
         <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="6" Padding="4">

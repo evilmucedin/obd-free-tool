@@ -22,7 +22,8 @@ ObdFree.sln
 │   ├── Protocol/         ELM327 command/response, OBD modes & PIDs
 │   ├── Diagnostics/      DTC decoding (DiagnosticTroubleCode, DtcParser)
 │   ├── Pids/             PID value decoders (PidDecoders, PidCatalog)
-│   └── Vehicles/         protocol selection + make profiles (Toyota/Lexus)
+│   ├── Vehicles/         protocol selection + make profiles (Toyota/Lexus)
+│   └── Uds/              UDS-on-CAN client for SRS/airbag & other modules
 ├── src/ObdFree.Cli       console app (AssemblyName: obd)
 ├── src/ObdFree.Gui       Avalonia desktop app (MVVM)
 ├── tests/ObdFree.Core.Tests   xUnit tests + FakeObdTransport
@@ -97,6 +98,22 @@ Async abstraction: `OpenAsync`, `CloseAsync`, `SendCommandAsync`, `IsOpen`,
   ISO 15765-4 CAN 11-bit/500k; **Generic** uses auto-detect. `ObdSession` applies
   the profile's protocol during `ConnectAsync`, and the CLI's `--make` /
   `--protocol` flags (with an interactive prompt) select it.
+
+### Uds (`Uds/`)
+UDS (ISO 14229) over CAN for **non-OBD modules** like SRS/airbag, which generic
+OBD-II can't reach:
+- `EcuModule` — a module's CAN request/response headers (with `WithHeaders`
+  override). `ToyotaModules.Srs` ships sensible Toyota/Lexus defaults (`7B0`/`7B8`),
+  documented as model-dependent and overridable.
+- `UdsClient` — `ConfigureAsync` points the adapter at a module (`ATSP6`, `ATSH`,
+  `ATCRA`, flow-control), then `ReadDtcsAsync` (service `0x19 0x02`),
+  `ReadDtcCountAsync` (`0x19 0x01`), and `ClearDtcsAsync` (`0x14 FFFFFF`).
+- `UdsResponse` / `UdsDtcParser` / `UdsDtc` — multi-frame-tolerant cleaning and
+  3-byte DTC decoding (e.g. `B0100-13` with a status byte).
+
+`ObdSession.ReadModuleStatusAsync` / `ClearModuleCodesAsync` wrap this and default
+to the Toyota/Lexus SRS module. **SRS addressing is experimental and varies by
+model**; clearing is a write op gated behind explicit confirmation in both UIs.
 
 ### Session (`ObdSession`)
 The public high-level entry point the CLI/GUI use (implemented):

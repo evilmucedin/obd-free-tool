@@ -91,8 +91,26 @@ the adapter's slower auto-detection. Older Toyota/Lexus may use ISO 9141-2
 
 Generic OBD-II modes (01/03/04/07/09) used by this tool are standardized across
 makes, so reading status, reading DTCs, and clearing DTCs work regardless of
-manufacturer. Make-specific *enhanced* diagnostics (beyond generic OBD-II) are a
-future enhancement.
+manufacturer.
+
+### SRS / airbag via UDS
+
+The airbag system (**SRS**) is *not* covered by generic OBD-II — it lives on its
+own ECU and is accessed with **UDS (ISO 14229) over CAN (ISO 15765)**. The tool
+addresses the SRS module by CAN headers and uses:
+
+- **Read codes:** ReadDTCInformation, service `0x19`, subfunction `0x02`
+  (reportDTCByStatusMask, mask `0xFF`). Positive response `0x59`. Each DTC is
+  **3 bytes** (so `B0100` + a failure-type suffix, e.g. `B0100-13`) plus a
+  status byte.
+- **Count:** subfunction `0x01` (reportNumberOfDTCByStatusMask).
+- **Clear codes:** ClearDiagnosticInformation, service `0x14`, group `0xFFFFFF`.
+  Positive response `0x54`.
+
+**Toyota/Lexus caveat:** the SRS CAN request/response headers vary by model and
+year and aren't publicly standardized. Defaults are `7B0`/`7B8`; override with
+`--srs-tx` / `--srs-rx`. Validate on the real vehicle. And per the safety notes
+below, never clear SRS codes before the fault is physically repaired.
 
 ## Diagnostic Trouble Codes (DTCs)
 

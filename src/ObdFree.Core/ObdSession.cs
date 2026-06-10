@@ -2,6 +2,7 @@ using ObdFree.Core.Diagnostics;
 using ObdFree.Core.Pids;
 using ObdFree.Core.Protocol;
 using ObdFree.Core.Transport;
+using ObdFree.Core.Uds;
 using ObdFree.Core.Vehicles;
 
 namespace ObdFree.Core;
@@ -10,6 +11,18 @@ namespace ObdFree.Core;
 /// <param name="Definition">The parameter that was read.</param>
 /// <param name="Value">The decoded value.</param>
 public readonly record struct LiveReading(PidDefinition Definition, PidValue Value);
+
+/// <summary>Status of a UDS module (e.g. SRS/airbag): its codes and a derived warning flag.</summary>
+/// <param name="Module">The module that was queried.</param>
+/// <param name="Codes">The trouble codes reported by the module.</param>
+public sealed record ModuleStatus(EcuModule Module, IReadOnlyList<UdsDtc> Codes)
+{
+    /// <summary>Gets a value indicating whether the module reported any trouble codes.</summary>
+    public bool HasFaults => Codes.Count > 0;
+
+    /// <summary>Gets a short human-readable summary, e.g. <c>OK</c> or <c>2 code(s)</c>.</summary>
+    public string Summary => HasFaults ? $"{Codes.Count} code(s)" : "OK (no codes)";
+}
 
 /// <summary>A snapshot of adapter and vehicle status.</summary>
 /// <param name="AdapterIdentity">The adapter's self-reported identity (from <c>ATI</c>).</param>
@@ -160,6 +173,43 @@ public sealed class ObdSession(IObdTransport transport, VehicleProfile? profile 
         return response.Status != ObdResponseStatus.Error
             && (response.Data.Contains((byte)0x44)
                 || raw.Contains("OK", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Reads trouble codes from a UDS module (e.g. the SRS/airbag ECU) over CAN.
+    /// Not part of generic OBD-II — addresses are make-specific. Defaults to the
+    /// Toyota/Lexus SRS module when <paramref name="module"/> is null.
+    /// </summary>
+    /// <param name="module">The module to query, or null for Toyota/Lexus SRS.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The module status (codes + derived warning flag).</returns>
+    public async Task<ModuleStatus> ReadModuleStatusAsync(EcuModule? module = null, CancellationToken cancellationToken = default)
+    {
+        EcuModule target = module ?? ToyotaModules.Srs;
+        await ConnectAsync(cancellationToken).ConfigureAwait(false);
+
+        var uds = new UdsClient(_transport);
+        await uds.ConfigureAsync(target, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<UdsDtc> codes = await uds.ReadDtcsAsync(cancellationToken).ConfigureAwait(false);
+        return new ModuleStatus(target, codes);
+    }
+
+    /// <summary>
+    /// Clears trouble codes from a UDS module (e.g. the SRS/airbag ECU).
+    /// <b>Write operation</b> — only after the underlying fault is repaired.
+    /// Defaults to the Toyota/Lexus SRS module when <paramref name="module"/> is null.
+    /// </summary>
+    /// <param name="module">The module to clear, or null for Toyota/Lexus SRS.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the module acknowledged the clear.</returns>
+    public async Task<bool> ClearModuleCodesAsync(EcuModule? module = null, CancellationToken cancellationToken = default)
+    {
+        EcuModule target = module ?? ToyotaModules.Srs;
+        await ConnectAsync(cancellationToken).ConfigureAwait(false);
+
+        var uds = new UdsClient(_transport);
+        await uds.ConfigureAsync(target, cancellationToken).ConfigureAwait(false);
+        return await uds.ClearDtcsAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<DiagnosticTroubleCode>> ReadCodesAsync(
