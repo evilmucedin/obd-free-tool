@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Debug the console CLI (AssemblyName: obd).
+      "name": "CLI (console)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build (CLI)",
+      "program": "${workspaceFolder}/src/ObdFree.Cli/bin/Debug/net10.0/obd.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/ObdFree.Cli",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
+      // Debug the Avalonia desktop GUI.
+      "name": "GUI (desktop)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build (GUI)",
+      "program": "${workspaceFolder}/src/ObdFree.Gui/bin/Debug/net10.0/ObdFree.Gui.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/ObdFree.Gui",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    }
+  ]
+}

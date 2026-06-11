@@ -137,6 +137,26 @@ Or use the cross-platform helper scripts (no flags to memorize):
 See [`scripts/README.md`](scripts/README.md) for all targets and supported
 platforms.
 
+### Developing in VS Code
+
+The repo ships a ready-to-use [VS Code](https://code.visualstudio.com/) setup in
+[`.vscode/`](.vscode/) — open the folder and you're good to go:
+
+- **Recommended extensions** (`extensions.json`): the C# Dev Kit, .NET runtime
+  helper, EditorConfig, and Avalonia tooling. VS Code prompts to install them.
+- **Build/test/format tasks** (`tasks.json`): run via *Terminal → Run Task* or
+  `Ctrl/Cmd+Shift+B` (default build). Includes `build`, `build (Release)`,
+  `test`, `test (coverage)`, and `format` / `format (verify)` — matching the CI
+  gates.
+- **Debug profiles** (`launch.json`): *Run and Debug* → **CLI (console)** or
+  **GUI (desktop)** to launch with breakpoints. Edit `args` in the CLI profile to
+  pass flags (e.g. `status --usb /dev/ttyUSB0 --make toyota`).
+- **Workspace settings** (`settings.json`): format-on-save, Roslyn analyzers, and
+  the `.slnx` solution wired up so everything builds together.
+
+All of these just wrap the same `dotnet` commands and helper scripts, so the
+VS Code, CLI, and CI experiences stay identical.
+
 ### Front-ends, one engine
 
 Every front-end is a thin shell over the shared, well-tested `ObdFree.Core`

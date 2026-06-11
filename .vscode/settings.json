@@ -1,0 +1,51 @@
+{
+  // Shared workspace settings. Local/personal overrides go in your user
+  // settings, not here. Mirrors the repo's .editorconfig + analyzer gates.
+
+  // Use the .slnx solution so OmniSharp/C# Dev Kit loads every project.
+  "dotnet.defaultSolution": "ObdFree.slnx",
+
+  // Honor .editorconfig and format on save to match the CI `dotnet format` gate.
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+  "[xml]": {
+    "editor.tabSize": 2
+  },
+  "[json]": {
+    "editor.tabSize": 2
+  },
+  "[jsonc]": {
+    "editor.tabSize": 2
+  },
+  "[yaml]": {
+    "editor.tabSize": 2
+  },
+
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // Surface analyzer diagnostics inline (warnings are errors in this repo).
+  "dotnet.unitTests.runSettingsPath": "",
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.enableRoslynAnalyzers": true,
+
+  // Keep build noise out of the explorer/search.
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true
+  },
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/artifacts": true
+  }
+}
