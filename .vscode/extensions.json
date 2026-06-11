@@ -1,0 +1,11 @@
+{
+  // Extensions VS Code will recommend when this repo is opened.
+  // Keep this list free & open: only widely-available, non-proprietary tooling.
+  "recommendations": [
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "editorconfig.editorconfig",
+    "avaloniateam.vscode-avalonia"
+  ]
+}
