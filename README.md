@@ -126,6 +126,7 @@ Or use the cross-platform helper scripts (no flags to memorize):
 ./scripts/publish-gui.sh        # self-contained GUI in artifacts/gui/
 
 # Windows (PowerShell)
+./scripts/setup-windows.ps1     # one-shot: install deps, build & run
 ./scripts/build.ps1
 ./scripts/test.ps1
 ./scripts/run-cli.ps1 --help
