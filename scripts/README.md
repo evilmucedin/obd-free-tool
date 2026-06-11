@@ -16,6 +16,7 @@ All scripts can be run from anywhere; they resolve the repo root themselves.
 | Task | Linux / macOS | Windows |
 |------|---------------|---------|
 | One-time setup (Ubuntu/Debian) | `./scripts/setup-ubuntu.sh` | — |
+| One-shot setup + build + run (Windows) | — | `./scripts/setup-windows.ps1 [-App cli\|gui\|none]` |
 | Build everything | `./scripts/build.sh [Debug\|Release]` | `./scripts/build.ps1 [-Configuration Release]` |
 | Run tests + coverage | `./scripts/test.sh [Debug\|Release]` | `./scripts/test.ps1 [-Configuration Release]` |
 | Run the **CLI** | `./scripts/run-cli.sh -- <args>` | `./scripts/run-cli.ps1 <args>` |
@@ -46,7 +47,30 @@ build and run **both** versions:
 ```
 
 It's idempotent — safe to re-run. macOS users install the .NET SDK via the
-official installer or Homebrew; Windows users via winget or the .NET installer.
+official installer or Homebrew.
+
+## First-time setup on Windows
+
+`setup-windows.ps1` is the Windows counterpart: one command installs
+dependencies, builds the solution, and runs the app.
+
+- installs the **.NET 10 SDK** (and **Git**, if missing) via **winget**
+  (skipped when already present),
+- builds the whole solution, then
+- launches the **CLI** (`--help` by default) or, with `-App gui`, the desktop GUI.
+
+```powershell
+./scripts/setup-windows.ps1                  # install deps, build, run the CLI
+./scripts/setup-windows.ps1 -App gui         # ... launch the desktop GUI instead
+./scripts/setup-windows.ps1 -App none        # install deps + build only
+./scripts/setup-windows.ps1 -SkipInstall     # skip dependency install
+./scripts/setup-windows.ps1 -App cli -- status --usb COM3 --make toyota
+```
+
+It's idempotent — safe to re-run. If `dotnet` isn't found right after install,
+open a new terminal so `PATH` refreshes. USB ELM327 dongles may need their
+serial driver (CH340/CP210x/FTDI), usually supplied by Windows Update; pair
+Bluetooth adapters in Windows Settings and use the assigned COM port.
 
 ## Examples
 
