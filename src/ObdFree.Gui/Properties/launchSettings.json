@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "ObdFree.Gui (desktop)": {
+      "commandName": "Project"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "obd (CLI)": {
+      "commandName": "Project",
+      "commandLineArgs": ""
+    },
+    "obd --help": {
+      "commandName": "Project",
+      "commandLineArgs": "--help"
+    }
+  }
+}

@@ -157,6 +157,28 @@ The repo ships a ready-to-use [VS Code](https://code.visualstudio.com/) setup in
 All of these just wrap the same `dotnet` commands and helper scripts, so the
 VS Code, CLI, and CI experiences stay identical.
 
+### Developing in Visual Studio
+
+Prefer the full [Visual Studio](https://visualstudio.microsoft.com/) IDE on
+Windows? Everything's wired up too:
+
+- **Open the solution** — Visual Studio 2022 (17.14+) opens the `ObdFree.slnx`
+  solution natively; no separate `.sln` needed.
+- **Required workloads** ([`.vsconfig`](.vsconfig)): when you open the repo,
+  Visual Studio prompts to install any missing components (.NET desktop + .NET
+  cross-platform build tools, the .NET SDK, NuGet, and Git). The correct .NET 10
+  SDK is selected automatically from [`global.json`](global.json).
+- **Run/debug profiles** (`Properties/launchSettings.json`): pick the startup
+  project and profile from the toolbar — **obd (CLI)** or **obd --help** for the
+  console tool, **ObdFree.Gui (desktop)** for the Avalonia app. Edit
+  `commandLineArgs` to pass flags (e.g. `status --usb COM3 --make toyota`).
+- **Test Explorer** discovers the xUnit tests automatically; **Format Document**
+  and analyzers honor the repo `.editorconfig`, matching the CI `dotnet format`
+  gate.
+
+Like the VS Code setup, this just drives the same `dotnet` build/test/run, so
+all environments stay in sync.
+
 ### Front-ends, one engine
 
 Every front-end is a thin shell over the shared, well-tested `ObdFree.Core`
